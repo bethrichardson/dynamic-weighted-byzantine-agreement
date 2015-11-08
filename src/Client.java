@@ -53,8 +53,8 @@ public class Client {
 
     private void initializeResponseSet (){
         responses.put("NoResponse", "No node response.");
-        responses.put("False", "Do not bid on the placement.");
-        responses.put("True", "Bid on the placement.");
+        responses.put("False", "Do not use network.");
+        responses.put("True", "Use network.");
     }
 
     /**
@@ -83,15 +83,15 @@ public class Client {
 
 
     /**
-     * validatePlacement <publisher> – .
-     * Initiate a request through the testing coordinator to ad bidders
+     * validateNetwork <network> – .
+     * Initiate a request through the coordinator to node pool
      *
-     * @param publisher the publisher on which to place an ad
+     * @param network the network for which to make the request
      *  **/
-    public ArrayList<String> validatePlacement(String publisher) {
-        String request = "validatePlacement," + publisher;
+    public ArrayList<String> validateNetwork(String network) {
+        String request = "validateNetwork," + network;
 
-        System.out.println("Attempting to validate ad placement for " + publisher + ".");
+        System.out.println("Attempting to validate network " + network + ".");
 
         return sendRequest(request);
     }

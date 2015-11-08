@@ -42,7 +42,7 @@ public class InputReader {
 
             while (publisher == null) {
                 publisher = sc.nextLine();
-                client.validatePlacement(publisher);
+                client.validateNetwork(publisher);
                 publisher = null;
                 }
         }

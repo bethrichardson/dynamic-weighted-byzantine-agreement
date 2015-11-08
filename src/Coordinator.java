@@ -1,39 +1,32 @@
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * If a node is currently answering in concert with other servers, then we give that node greater
  * weight in future consensus calculations. If a node is currently answering in conflict with other servers,
  * then we give that node less weight in future consensus calculations.
  */
-public class Coordinator {
-    int numNodes, startPort;
-    ArrayList<Node> nodeList;
-    List<InetSocketAddress> coordinatorAddressList, nodeAddressList;
-    MsgHandler msg;
-    InetSocketAddress coordinator;
-    TCPListenerThread tcpThread;
+public class Coordinator extends Server{
+    int startPort;
+    ArrayList<Node> nodeObjectList;
 
     public Coordinator(int startPort, int numNodes){
-        coordinatorAddressList = Utils.createServerList(startPort, 1); //first just create the coordinator
-        this.coordinator = coordinatorAddressList.get(0); //set the socket for the coordinator
+        super(numNodes, Utils.createServerList(startPort, 1).get(0));
         MsgHandler.debug("Coordinator configured at " + coordinator.toString());
-        nodeAddressList = Utils.createServerList(startPort + 1, numNodes); //init to all nodes
+        this.nodeList = Utils.createServerList(startPort + 1, numNodes); //init to all nodes
         this.numNodes = numNodes;
         this.startPort = startPort;
-        nodeList = new ArrayList<>();
+        nodeObjectList = new ArrayList<>();
         createNodeSet();
 
     }
 
     public void createNodeSet(){
         for (int i = 0; i < numNodes; i++){
-            nodeList.add(new Node(nodeAddressList, i, numNodes, this.coordinator));
+            nodeObjectList.add(new Node(nodeList, i, numNodes, coordinator));
         }
 
-        this.msg = new CoordinatorMsgHandler(this, numNodes, nodeAddressList);
+        this.msg = new CoordinatorMsgHandler(this, numNodes, nodeList);
 
         //Set up listener thread for TCP
         try {
@@ -45,11 +38,12 @@ public class Coordinator {
 
     }
 
+    @Override
     public void shutDown() throws IOException {
         for (int i = 0; i < numNodes; i++){
-            nodeList.get(i).shutDown();
+            nodeObjectList.get(i).shutDown();
         }
-        tcpThread.interrupt();
+        super.shutDown();
     }
 
     public static void main (String[] args) {

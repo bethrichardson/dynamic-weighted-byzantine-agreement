@@ -29,9 +29,9 @@ public class TESTIntegrationTest {
 
     @Test
     public void testValidLookup() throws Exception {
-        String name = "cnn.com";
+        String name = "10.0.0.1/8";
         String expectedResponse = client.responses.get("True");
-        String response = validatePlacement(name);
+        String response = validateNetwork(name);
 
         assertEquals(expectedResponse, response);
     }
@@ -40,14 +40,14 @@ public class TESTIntegrationTest {
     public void testInvalidLookup() throws Exception {
         String name = "bananas.com";
         String expectedResponse = client.responses.get("False");
-        String response = validatePlacement(name);
+        String response = validateNetwork(name);
 
         assertEquals(expectedResponse, response);
     }
 
 
-    public String validatePlacement(String name){
-        return client.getResponse(client.validatePlacement(name));
+    public String validateNetwork(String name){
+        return client.getResponse(client.validateNetwork(name));
     }
 
 }

@@ -28,7 +28,7 @@ public class TESTMultipleClientIntegration {
         int n = rand.nextInt(1000);
         Client client = new Client(serverList);
 
-        String publisher = "cnn.com";
+        String publisher = "10.0.0.1/8";
         String expectedResponse = client.responses.get("True");
         String response = validatePlacement(client, publisher);
 
@@ -36,6 +36,6 @@ public class TESTMultipleClientIntegration {
     }
 
     public String validatePlacement(Client client, String name){
-        return client.getResponse(client.validatePlacement(name));
+        return client.getResponse(client.validateNetwork(name));
     }
 }
