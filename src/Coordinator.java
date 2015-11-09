@@ -21,6 +21,10 @@ public class Coordinator extends Server{
 
     }
 
+    public int alpha (){
+    	return 0;
+    }
+    
     public void createNodeSet(){
         for (int i = 0; i < numNodes; i++){
             nodeObjectList.add(new Node(nodeList, i, numNodes, coordinator));
