@@ -63,7 +63,7 @@ public class Node extends Server{
     }
 
     public void switchAlgorithm(Boolean queenAlgorithm){
-        this.queenAlgorithm = queenAlgorithm; //TODO: Call this via a control message
+        this.queenAlgorithm = queenAlgorithm;
     }
 
     /**

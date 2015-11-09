@@ -29,7 +29,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
             currentResponse = responses.get(i);
             MsgHandler.debug("Received from node " + Integer.toString(i) + ": " + currentResponse);
             if (i > 0){
-                consensusDecision = (currentResponse.equals(responses.get(i-1)));
+                consensusDecision = (currentResponse.equals(responses.get(i-1))); //TODO: determine consensus
             }
         }
         if (consensusDecision)
