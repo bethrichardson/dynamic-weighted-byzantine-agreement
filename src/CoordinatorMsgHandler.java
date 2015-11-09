@@ -32,11 +32,13 @@ public class CoordinatorMsgHandler extends MsgHandler {
                 consensusDecision = (currentResponse.equals(responses.get(i-1))); //TODO: determine consensus
             }
         }
-        if (consensusDecision)
+        if (consensusDecision) {
             response.add(responses.get(0));
-        else
+        }
+        else {
             coordinator.switchAlgorithm(false);
             actOnMsg(request);
+        }
         return response;
     }
 }

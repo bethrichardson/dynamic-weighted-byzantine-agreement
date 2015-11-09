@@ -29,7 +29,7 @@ public class TESTMultipleClientIntegration {
         Client client = new Client(serverList);
 
         String publisher = "10.0.0.1/8";
-        String expectedResponse = client.responses.get("True");
+        String expectedResponse = client.responses.get("TRUE");
         String response = validatePlacement(client, publisher);
 
         assertEquals(expectedResponse, response);

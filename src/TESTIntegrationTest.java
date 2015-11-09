@@ -30,7 +30,7 @@ public class TESTIntegrationTest {
     @Test
     public void testValidLookup() throws Exception {
         String name = "10.0.0.1/8";
-        String expectedResponse = client.responses.get("True");
+        String expectedResponse = client.responses.get("TRUE");
         String response = validateNetwork(name);
 
         assertEquals(expectedResponse, response);
@@ -39,7 +39,7 @@ public class TESTIntegrationTest {
     @Test
     public void testInvalidLookup() throws Exception {
         String name = "bananas.com";
-        String expectedResponse = client.responses.get("False");
+        String expectedResponse = client.responses.get("FALSE");
         String response = validateNetwork(name);
 
         assertEquals(expectedResponse, response);
