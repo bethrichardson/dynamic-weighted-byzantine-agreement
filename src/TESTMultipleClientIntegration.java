@@ -7,13 +7,18 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 
 public class TESTMultipleClientIntegration {
-    Coordinator coordinator;
     List<InetSocketAddress> serverList;
+    List<InetSocketAddress> coordinatorList;
+    InetSocketAddress coordinatorAddress;
+    Coordinator coordinator;
+    int numNodes = 2;
 
     @BeforeClass
     public void setUp() throws Exception {
-        serverList = Utils.createServerList(9001, 2);
-        coordinator = Utils.setupNewTestServer();
+        coordinatorList = Utils.createServerList(9000, 1);
+        serverList = Utils.createServerList(9001, numNodes);
+        coordinatorAddress = coordinatorList.get(0);
+        coordinator = Utils.setupNewTestServer(numNodes);
     }
 
     @AfterClass
@@ -26,7 +31,7 @@ public class TESTMultipleClientIntegration {
     public void validPlacements() {
         Random rand = new Random();
         int n = rand.nextInt(1000);
-        Client client = new Client(serverList);
+        Client client = new Client(coordinatorList);
 
         String publisher = "10.0.0.1/8";
         String expectedResponse = client.responses.get("TRUE");

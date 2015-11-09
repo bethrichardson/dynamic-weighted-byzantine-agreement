@@ -1,6 +1,7 @@
 import org.junit.*;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -11,14 +12,15 @@ public class TESTIntegrationTest {
     List<InetSocketAddress> coordinatorList;
     InetSocketAddress coordinatorAddress;
     Coordinator coordinator;
+    int numNodes = 5;
 
     @Before
     public void setUp() throws Exception {
         coordinatorList = Utils.createServerList(9000, 1);
-        serverList = Utils.createServerList(9001, 2);
-        client = new Client(serverList);
+        serverList = Utils.createServerList(9001, numNodes);
+        client = new Client(coordinatorList);
         coordinatorAddress = coordinatorList.get(0);
-        coordinator = Utils.setupNewTestServer();
+        coordinator = Utils.setupNewTestServer(numNodes);
     }
 
     @After
@@ -31,7 +33,7 @@ public class TESTIntegrationTest {
     public void testValidLookup() throws Exception {
         String name = "10.0.0.1/8";
         String expectedResponse = client.responses.get("TRUE");
-        String response = validateNetwork(name);
+        String response = validateNetwork(name, client);
 
         assertEquals(expectedResponse, response);
     }
@@ -40,14 +42,75 @@ public class TESTIntegrationTest {
     public void testInvalidLookup() throws Exception {
         String name = "bananas.com";
         String expectedResponse = client.responses.get("FALSE");
-        String response = validateNetwork(name);
+        String response = validateNetwork(name, client);
 
         assertEquals(expectedResponse, response);
     }
 
+    @Test
+    public void testCoordinatorCanSwitchFaultyNode() throws Exception {
+        coordinator.setNodeFaulty(0, true);
+        assertTrue(coordinator.nodeObjectList.get(0).actFaulty);
+    }
 
-    public String validateNetwork(String name){
-        return client.getResponse(client.validateNetwork(name));
+    @Test
+    public void testFaultyNodeGivesInconsistentAnswers() throws Exception {
+        String name = "banana";
+        coordinator.setNodeFaulty(0, true);
+        Client directNodeClient = new Client(serverList);
+
+        String expectedResponse = client.responses.get("TRUE");
+        String firstResponse = validateNetwork(name, directNodeClient);
+        String secondResponse = validateNetwork(name, directNodeClient);
+
+        assertEquals(expectedResponse, firstResponse);
+        assertNotEquals(firstResponse, secondResponse);
+    }
+
+    @Test
+    public void testCoordinatorCanResetAllFaultyNodes() throws Exception {
+        coordinator.setNodeFaulty(0, true);
+        coordinator.resetFaultyNodes();
+        for(int i = 0; i < numNodes; i ++) {
+            assertFalse(coordinator.nodeObjectList.get(i).actFaulty);
+        }
+    }
+
+    @Test
+    public void testCoordinatorCanCreateFaultyNodeSet() throws Exception {
+        int expectedNumFaultyNodes = 2;
+        ArrayList<Integer> faultyNodes = new ArrayList<>(expectedNumFaultyNodes);
+
+        coordinator.createFaultyNodes(expectedNumFaultyNodes);
+        for(int i = 0; i < numNodes; i ++) {
+            if (coordinator.nodeObjectList.get(i).actFaulty)
+                faultyNodes.add(i);
+        }
+        assertEquals(expectedNumFaultyNodes, faultyNodes.size());
+    }
+
+    @Test
+    public void testCoordinatorCanSwitchAlgorithm() throws Exception {
+        coordinator.setAlgorithm(false);
+        assertFalse(coordinator.nodeObjectList.get(0).queenAlgorithm);
+        coordinator.setAlgorithm(true);
+        assertTrue(coordinator.nodeObjectList.get(0).queenAlgorithm);
+    }
+
+    @Test
+    public void testCoordinatorSetsInitialNormalizedWeightsOnNodes() throws Exception {
+        double[] weights = coordinator.createInitialWeights();
+        double normalizedWeight = (1.0 / numNodes);
+        for(int i = 0; i < numNodes; i ++) {
+            assertEquals(weights[i], normalizedWeight, 0.001);
+        }
+        for(int i = 0; i < numNodes; i ++) {
+            assertEquals(weights[i], coordinator.nodeObjectList.get(i).weights[i], 0.001);
+        }
+    }
+
+    public String validateNetwork(String name, Client myClient){
+        return myClient.getResponse(myClient.validateNetwork(name));
     }
 
 }

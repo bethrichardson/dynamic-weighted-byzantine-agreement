@@ -41,6 +41,7 @@ public class MsgHandler {
     public String sendMsg(String request, int serverId){
         InetSocketAddress server = getNode(serverId);
         String response = "";
+        request = Integer.toString(nodeIndex) + "," + request;
         try {
             return makeServerRequest(server, request, true);
         } catch (IOException e) {
@@ -87,10 +88,10 @@ public class MsgHandler {
     }
     public void interpretMessage(String request){
         ArrayList<String> requestList =  Utils.interpretStringAsList(request);
-        handleMsg(Integer.parseInt(requestList.get(1)), Integer.parseInt(requestList.get(2)), requestList.get(0), requestList.get(3));
+        handleMsg(Integer.parseInt(requestList.get(0)), requestList.get(1), requestList.get(2));
     }
 
-    public void handleMsg(int timeStamp, int src, String tag, String request) {
+    public void handleMsg(int src, String tag, String request) {
 
     }
 
@@ -103,9 +104,9 @@ public class MsgHandler {
     public ArrayList<String> routeMessage(String request){
         ArrayList<String> requestList =  Utils.interpretStringAsList(request);
         ArrayList<String> response = new ArrayList<>();
-        String method = requestList.get(0);
+        String method = requestList.get(1);
 
-        MsgHandler.debug("Accessing node with request: " + request);
+        MsgHandler.debug("Accessing node " + Integer.toString(nodeIndex) + " with request: " + request);
 
         if (method.contains("control")){
             response.add("done");

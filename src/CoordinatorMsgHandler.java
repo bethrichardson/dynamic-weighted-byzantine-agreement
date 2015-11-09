@@ -14,8 +14,10 @@ public class CoordinatorMsgHandler extends MsgHandler {
     }
 
     @Override
-    public synchronized void handleMsg(int timeStamp, int src, String tag, String request) {
-        //TODO: Handle control messages
+    public synchronized void handleMsg(int src, String tag, String request) {
+        if (tag.equals("controlSetFaulty")) {
+            coordinator.createFaultyNodes(Integer.parseInt(request));
+        }
     }
 
     @Override
@@ -36,7 +38,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
             response.add(responses.get(0));
         }
         else {
-            coordinator.switchAlgorithm(false);
+            coordinator.setAlgorithm(false);
             actOnMsg(request);
         }
         return response;

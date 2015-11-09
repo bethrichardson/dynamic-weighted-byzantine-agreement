@@ -1,44 +1,19 @@
 /**
  * Created by neelshah on 10/31/15.
  */
-public class WeightedKing {
+public class WeightedKing extends ConsensusAlgorithm {
 
-    // Process id
-    private int i;
-
-    // Weights
-    private double[] w;
-
-    // Proposed value
-    private Value V;
-
-    // Received values
-    private Value[] values;
-
-    // My value
-    private Value myValue;
-
-    // My weight
-    private double myWeight;
-
-    // King value
-    private Value kingValue;
-
-    //Message Handler for broadcasting control messages
-    private MsgHandler msg;
-
-    public WeightedKing(int i, int n, Value V, MsgHandler msg) {
-        this.i = i;
-        this.w = new double[n];
-        this.V = V;
-        this.msg = msg;
+    public WeightedKing(int i, int n, Value V, MsgHandler msg, double[] weights) {
+        super(i, n, V, msg, weights);
     }
 
+    @Override
     public int calculateAlpha(){
         // Need this
         return 0;
     }
 
+    @Override
     public void run(int alpha) {
         for (int k = 1; k <= alpha; k++) {
             double s0 = 0.0, s1 = 0.0, su = 0.0;
@@ -102,31 +77,23 @@ public class WeightedKing {
 
             // Phase Three
             if (k == i) {
-                broadcastKingValue(myValue);
-                V = kingValue = myValue;
+                broadcastLeaderValue(myValue);
+                V = leaderValue = myValue;
             } else {
-                kingValue = receiveKingValue();
+                leaderValue = receiveLeaderValue();
 
                 if (V == Value.UNDECIDED || myWeight < 0.667) {
-                    if (kingValue == Value.UNDECIDED) {
+                    if (leaderValue == Value.UNDECIDED) {
                         V = Value.TRUE;
                     } else {
-                        V = kingValue;
+                        V = leaderValue;
                     }
                 }
             }
+
+            //Check for faulty nodes
+            super.runFaultyNodePhase();
         }
     }
 
-    private void broadcastNormalValue(Value V) {
-        msg.broadcastMsg("controlNormalValue," + V);
-    }
-
-    private void broadcastKingValue(Value V) {
-        msg.broadcastMsg("controlKingValue," + V);
-    }
-
-    private Value receiveKingValue() {
-        return Value.UNDECIDED;
-    }
 }

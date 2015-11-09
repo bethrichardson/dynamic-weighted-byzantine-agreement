@@ -1,62 +1,35 @@
 /**
  * Created by neelshah on 10/31/15.
  */
-public class WeightedQueen {
-
-    // Process id
-    private int i;
-
-    //number of nodes
-    private int N;
-
-    private double rho = 1/4;
-
-    // Weights
-    private double[] w;
-
-    // Proposed value
-    private Value V;
-
-    // Received values
-    private Value[] values;
-
-    // My value
-    private Value myValue;
-
-    // My weight
-    private double myWeight;
-
-    // Queen value
-    private Value queenValue;
+public class WeightedQueen extends ConsensusAlgorithm {
 
     //Message Handler for broadcasting control messages
     private MsgHandler msg;
 
-    public WeightedQueen(int i, int n, Value V, MsgHandler msg) {
-        this.i = i;
-        this.w = new double[n];
-        this.N = n;
-        this.V = V;
-        this.msg = msg;
+    public WeightedQueen(int i, int n, Value V, MsgHandler msg, double[] weights) {
+        super(i, n, V, msg, weights);
+        rho = 1/4;
     }
 
+    @Override
     public int calculateAlpha(){
         // Need this
         return 0;
     }
 
+    @Override
     public void run(int alpha) {
         for (int q = 1; q <= alpha; q++) {
             double s0 = 0.0, s1 = 0.0;
 
             // Phase One
-            if (w[i] > 0) {
+            if (w[i] > 0) { //TODO: Must Broadcast value even if 0 weight to allow to redistributed weight when correct
                 broadcastNormalValue(V);
                 values[i] = V;
             }
 
             for (int j = 0; j < w.length; j++) {
-                if (w[j] > 0) {
+                if (w[j] > 0) {  //TODO: Weights must be given to the nodes. So this will work.
                     if (values[j] == Value.TRUE) {
                         s1 += w[j];
                     } else {
@@ -75,29 +48,20 @@ public class WeightedQueen {
 
             // Phase Two
             if (q == i) {
-                broadcastQueenValue(myValue);
-                V = queenValue = myValue;
+                broadcastLeaderValue(myValue);
+                V = leaderValue = myValue;
             } else {
-                queenValue = receiveQueenValue();
+                leaderValue = receiveLeaderValue();
 
                 if (myWeight > 0.75) {
                     V = myValue;
                 } else {
-                    V = queenValue;
+                    V = leaderValue;
                 }
             }
+
+            //Check for faulty nodes
+            super.runFaultyNodePhase();
         }
-    }
-
-    private void broadcastNormalValue(Value V) {
-        msg.broadcastMsg("controlNormalValue," + V);
-    }
-
-    private void broadcastQueenValue(Value V) {
-        msg.broadcastMsg("controlQueenValue," + V);
-    }
-
-    private Value receiveQueenValue() {
-        return Value.TRUE;
     }
 }

@@ -10,6 +10,9 @@ public class Node extends Server{
     WeightedQueen queen;
     WeightedKing king;
     Boolean queenAlgorithm = true;
+    Boolean actFaulty = false;
+    Value lastReply = Value.FALSE; //Used to produce an iterating response when faulty
+    double[] weights;
 
     public ArrayList<String> knownNetworks;
 
@@ -19,7 +22,7 @@ public class Node extends Server{
      * @param nodeIndex Index in node list for current node
      * @param numNodes total number of nodes
      */
-    public Node(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator){
+    public Node(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator, double[] initialWeights){
         super(numNodes, coordinator);
         this.nodeIndex = nodeIndex;
         this.knownNetworks = new ArrayList<>();
@@ -27,6 +30,7 @@ public class Node extends Server{
         this.nodeList = serverList;
         this.coordinator = coordinator;
         this.msg = new NodeMsgHandler(this, numNodes, nodeIndex, serverList);
+        this.weights = initialWeights;
 
 
         this.node = msg.getNode(nodeIndex);
@@ -62,8 +66,60 @@ public class Node extends Server{
             return Value.FALSE;
     }
 
-    public void switchAlgorithm(Boolean queenAlgorithm){
+    public void setAlgorithm(Boolean queenAlgorithm){
         this.queenAlgorithm = queenAlgorithm;
+    }
+
+    public void setFaultyBehavior(Boolean actFaulty){
+        this.actFaulty = actFaulty;
+    }
+
+    public Value returnBadAnswer(){
+        switch (lastReply){
+            case TRUE:
+                if (Utils.isEven(nodeIndex))
+                    return Value.FALSE;
+                else
+                    return Value.UNDECIDED;
+            case FALSE:
+                if (Utils.isEven(nodeIndex))
+                    return Value.UNDECIDED;
+                else
+                    return Value.TRUE;
+            default:
+                if (Utils.isEven(nodeIndex))
+                    return Value.TRUE;
+                else
+                    return Value.FALSE;
+        }
+    }
+
+    public Value calculateResponse(String network){
+        Value reply;
+        if (!actFaulty){
+            reply = validateNetwork(network);
+        }
+        else {
+            reply = returnBadAnswer();
+        }
+        lastReply = reply;
+        return reply;
+    }
+
+    public Value[] checkForFaultyNodes(ConsensusAlgorithm algorithm){
+        ConsensusAlgorithm checkNodeAlgorithm;
+        for (int j = 0; j < algorithm.faultySet.length; j++){
+            checkNodeAlgorithm = new ConsensusAlgorithm(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.w);
+            int alpha = algorithm.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
+            checkNodeAlgorithm.run(alpha);
+            algorithm.faultySet[j] = checkNodeAlgorithm.myValue;
+        }
+
+        return algorithm.faultySet;
+    }
+
+    public void updateWeights(){
+        //TODO: Update weights based on algorithm.faultySet
     }
 
     /**
@@ -74,20 +130,25 @@ public class Node extends Server{
      */
     public synchronized ArrayList<String> accessBackend(String network){
         ArrayList<String> response = new ArrayList<>();
-        MsgHandler.debug("Accessing node with request: " + network);
-        Value initialResponse = validateNetwork(network);
+        MsgHandler.debug("Accessing backend for node " + Integer.toString(nodeIndex) + " with request: " + network);
+        Value initialResponse = calculateResponse(network);
+
         if (queenAlgorithm){
-            queen = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg);
+            queen = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights);
 //        int alpha = queen.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
 //        queen.run(alpha);
+//            queen.faultySet = checkForFaultyNodes(queen);
+            weights = queen.w;
         }
         else {
-            king = new WeightedKing(nodeIndex, numNodes, initialResponse, msg);
+            king = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights);
 //        int alpha = king.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
 //        king.run(alpha);
+//            king.faultySet = checkForFaultyNodes(king);
+            weights = king.w;
         }
 
-        response.add((validateNetwork(network).toString()));
+        response.add((calculateResponse(network).toString())); //TODO: Should instead return value from consensus algorithm
         return response;
     }
 }
