@@ -87,11 +87,11 @@ public class MsgHandler {
     }
     public void interpretMessage(String request){
         ArrayList<String> requestList =  Utils.interpretStringAsList(request);
-        handleMsg(Integer.parseInt(requestList.get(1)), Integer.parseInt(requestList.get(2)), requestList.get(0));
+        handleMsg(Integer.parseInt(requestList.get(1)), Integer.parseInt(requestList.get(2)), requestList.get(0), requestList.get(3));
     }
 
-    public void handleMsg(int timeStamp, int src, String tag) {
-       //Handle control messages
+    public void handleMsg(int timeStamp, int src, String tag, String request) {
+
     }
 
     public ArrayList<String> actOnMsg(String request){
@@ -107,15 +107,12 @@ public class MsgHandler {
 
         MsgHandler.debug("Accessing node with request: " + request);
 
-        switch(method){
-            case("control"):
-                response.add("done");
-                interpretMessage(request); //Control messages should be sent through here
-                break;
-            default:
-                response = actOnMsg(request); //What would this be used for?
-                break;
-
+        if (method.contains("control")){
+            response.add("done");
+            interpretMessage(request); //Control messages should be sent through here
+        }
+        else {
+            response = actOnMsg(request);
         }
 
         return response;

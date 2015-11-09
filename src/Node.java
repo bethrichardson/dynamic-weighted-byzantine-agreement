@@ -7,6 +7,9 @@ import java.util.List;
 public class Node extends Server{
     public int nodeIndex;
     InetSocketAddress node;
+    WeightedQueen queen;
+    WeightedKing king;
+    Boolean queenAlgorithm = true;
 
     public ArrayList<String> knownNetworks;
 
@@ -52,9 +55,15 @@ public class Node extends Server{
      * @return Whether the placement is a valid publisher.
      *      Returns -1 if not found.
      */
-    public Boolean validateNetwork(String name){
-        knownNetworks.contains(name);
-        return knownNetworks.contains(name);
+    public Value validateNetwork(String name){
+        if (knownNetworks.contains(name))
+            return Value.TRUE;
+        else
+            return Value.FALSE;
+    }
+
+    public void switchAlgorithm(Boolean queenAlgorithm){
+        this.queenAlgorithm = queenAlgorithm; //TODO: Call this via a control message
     }
 
     /**
@@ -66,7 +75,19 @@ public class Node extends Server{
     public synchronized ArrayList<String> accessBackend(String network){
         ArrayList<String> response = new ArrayList<>();
         MsgHandler.debug("Accessing node with request: " + network);
-        response.add(Boolean.toString(validateNetwork(network)));
+        Value initialResponse = validateNetwork(network);
+        if (queenAlgorithm){
+            queen = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg);
+//        int alpha = queen.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
+//        queen.run(alpha);
+        }
+        else {
+            king = new WeightedKing(nodeIndex, numNodes, initialResponse, msg);
+//        int alpha = king.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
+//        king.run(alpha);
+        }
+
+        response.add((validateNetwork(network).toString()));
         return response;
     }
 }

@@ -53,8 +53,8 @@ public class Client {
 
     private void initializeResponseSet (){
         responses.put("NoResponse", "No node response.");
-        responses.put("False", "Do not use network.");
-        responses.put("True", "Use network.");
+        responses.put("FALSE", "Do not use network.");
+        responses.put("TRUE", "Use network.");
     }
 
     /**

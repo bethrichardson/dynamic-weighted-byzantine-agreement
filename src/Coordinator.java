@@ -38,6 +38,10 @@ public class Coordinator extends Server{
 
     }
 
+    public void switchAlgorithm(Boolean queenAlgorithm){
+        msg.broadcastMsg("controlSwitchAlgorithm," + Boolean.toString(queenAlgorithm));
+    }
+
     @Override
     public void shutDown() throws IOException {
         for (int i = 0; i < numNodes; i++){

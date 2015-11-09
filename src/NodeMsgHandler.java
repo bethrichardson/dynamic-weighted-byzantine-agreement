@@ -37,8 +37,10 @@ public class NodeMsgHandler extends MsgHandler {
     }
 
     @Override
-    public synchronized void handleMsg(int timeStamp, int src, String tag) {
-        //Handle control messages
+    public synchronized void handleMsg(int timeStamp, int src, String tag, String request) {
+        if (tag.equals("controlSwitchAlgorithm")) {
+            server.switchAlgorithm(Boolean.getBoolean(request));
+        }
     }
 
     @Override

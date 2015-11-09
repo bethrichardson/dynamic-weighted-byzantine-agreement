@@ -14,8 +14,8 @@ public class CoordinatorMsgHandler extends MsgHandler {
     }
 
     @Override
-    public synchronized void handleMsg(int timeStamp, int src, String tag) {
-        //Handle control messages
+    public synchronized void handleMsg(int timeStamp, int src, String tag, String request) {
+        //TODO: Handle control messages
     }
 
     @Override
@@ -25,7 +25,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
         Boolean consensusDecision = true;
         String currentResponse;
         for (int i = 0; i < responses.size(); i++){
-            responses.set(i, responses.get(i).replaceAll("\\[", "").replaceAll("\\]",""));
+            responses.set(i, responses.get(i).replaceAll("\\[", "").replaceAll("\\]", ""));
             currentResponse = responses.get(i);
             MsgHandler.debug("Received from node " + Integer.toString(i) + ": " + currentResponse);
             if (i > 0){
@@ -35,7 +35,8 @@ public class CoordinatorMsgHandler extends MsgHandler {
         if (consensusDecision)
             response.add(responses.get(0));
         else
-            response.add("done");
+            coordinator.switchAlgorithm(false);
+            actOnMsg(request);
         return response;
     }
 }
