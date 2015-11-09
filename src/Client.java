@@ -55,6 +55,7 @@ public class Client {
         responses.put("NoResponse", "No node response.");
         responses.put("FALSE", "Do not use network.");
         responses.put("TRUE", "Use network.");
+        responses.put("UNDECIDED", "Consensus could not be reached.");
     }
 
     /**

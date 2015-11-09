@@ -1,5 +1,7 @@
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * If a node is currently answering in concert with other servers, then we give that node greater
@@ -21,9 +23,18 @@ public class Coordinator extends Server{
 
     }
 
+    public double[] createInitialWeights(){
+        double[] w = new double[numNodes];
+        double normalizedWeight = 1.0/numNodes;
+        for (int i = 0; i < numNodes; i++){
+            w[i] = normalizedWeight;
+        }
+        return w;
+    }
+
     public void createNodeSet(){
         for (int i = 0; i < numNodes; i++){
-            nodeObjectList.add(new Node(nodeList, i, numNodes, coordinator));
+            nodeObjectList.add(new Node(nodeList, i, numNodes, coordinator, createInitialWeights()));
         }
 
         this.msg = new CoordinatorMsgHandler(this, numNodes, nodeList);
@@ -38,8 +49,43 @@ public class Coordinator extends Server{
 
     }
 
-    public void switchAlgorithm(Boolean queenAlgorithm){
-        msg.broadcastMsg("controlSwitchAlgorithm," + Boolean.toString(queenAlgorithm));
+    public void setAlgorithm(Boolean queenAlgorithm){
+        msg.broadcastMsg("controlSetAlgorithm," + Boolean.toString(queenAlgorithm));
+    }
+
+    public void setNodeFaulty(Integer i, Boolean actFaulty){
+        msg.sendMsg("controlSetFaulty," + Boolean.toString(actFaulty), i);
+    }
+
+    public void resetFaultyNodes(){
+        msg.broadcastMsg("controlSetFaulty," + Boolean.toString(false));
+    }
+
+    public ArrayList<Integer> selectFaultyNodes(int numFaultyNodes){
+        ArrayList<Integer> faultyNodes = new ArrayList<>(numFaultyNodes);
+        int badNode = -1;
+        Boolean foundUniqueNode;
+        for (int i = 0; i < numFaultyNodes; i++){
+            foundUniqueNode = false;
+            while(!foundUniqueNode){
+                badNode = ThreadLocalRandom.current().nextInt(0, numNodes);
+                if (!faultyNodes.contains(badNode)){
+                    foundUniqueNode = true;
+                }
+            }
+            faultyNodes.add(badNode);
+        }
+        return faultyNodes;
+    }
+
+    public void createFaultyNodes(int numFaultyNodes){
+        resetFaultyNodes();
+
+        ArrayList<Integer> faultyNodes = selectFaultyNodes(numFaultyNodes);
+
+        for (int i = 0; i < numFaultyNodes; i++){
+            setNodeFaulty(faultyNodes.get(i), true);
+        }
     }
 
     @Override

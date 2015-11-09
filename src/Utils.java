@@ -36,9 +36,12 @@ public class Utils {
         return ServerList;
     }
 
-    public static Coordinator setupNewTestServer(){
-        int numNodes = 2;
+    public static Coordinator setupNewTestServer(int numNodes){
         int startPort = 9000;
         return new Coordinator(startPort, numNodes);
+    }
+
+    public static Boolean isEven(int i){
+        return (i & 1) == 0;
     }
 }
