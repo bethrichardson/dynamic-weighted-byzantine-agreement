@@ -71,12 +71,7 @@ public class Client {
         }
         else {
             String bid = response.get(0);
-
-            if (bid.equals("true"))
-                result = responses.get("True");
-            else {
-                result = responses.get("False");
-            }
+            result = responses.get(bid);
         }
         return result;
     }
