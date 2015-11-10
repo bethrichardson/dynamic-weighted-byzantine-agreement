@@ -39,8 +39,13 @@ public class CoordinatorMsgHandler extends MsgHandler {
         }
         else {
             coordinator.setAlgorithm(false);
-            actOnMsg(request);
+            actOnMsg(request); // TODO Return this value and avoid recursion
         }
+
+        // TODO Is this the right place for this?
+        coordinator.updateFaultyMatrix(responses);
+        coordinator.updateWeights();
+
         return response;
     }
 }
