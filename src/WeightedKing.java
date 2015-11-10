@@ -9,6 +9,7 @@ public class WeightedKing extends ConsensusAlgorithm {
 
     public WeightedKing(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights) {
         super(i, n, V, msg, weights);
+        rho = 1.0/3;
     }
 
     @Override

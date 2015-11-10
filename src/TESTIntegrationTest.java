@@ -111,17 +111,35 @@ public class TESTIntegrationTest {
     }
     
     @Test
-    public void testAnchorWithAlphaGreaterThanOne() throws Exception {
+    public void testAnchorWithQueenAlgorithm() throws Exception {
     	ArrayList<Double> weights = coordinator.nodeObjectList.get(0).weights;
+        Node node = coordinator.nodeObjectList.get(0);
 		weights.set(0, 0.1);
 		weights.set(1, 0.2);
 		weights.set(2, 0.3);
 		weights.set(3, 0.2);
 		weights.set(4, 0.2);
-		
+
+        node.queen = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
 		int anchor = coordinator.nodeObjectList.get(0).queen.calculateAnchor();
 		
-		assertEquals(2, anchor);
+		assertEquals(1, anchor);
+    }
+
+    @Test
+    public void testAnchorWithKingAlgorithm() throws Exception {
+        ArrayList<Double> weights = coordinator.nodeObjectList.get(0).weights;
+        Node node = coordinator.nodeObjectList.get(0);
+        weights.set(0, 0.1);
+        weights.set(1, 0.2);
+        weights.set(2, 0.3);
+        weights.set(3, 0.2);
+        weights.set(4, 0.2);
+
+        node.king = new WeightedKing(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
+        int anchor = coordinator.nodeObjectList.get(0).king.calculateAnchor();
+
+        assertEquals(2, anchor);
     }
 
     public String validateNetwork(String name, Client myClient){
