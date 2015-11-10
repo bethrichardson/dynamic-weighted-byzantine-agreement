@@ -57,11 +57,12 @@ public class TESTIntegrationTest {
     public void testFaultyNodeGivesInconsistentAnswers() throws Exception {
         String name = "banana";
         coordinator.setNodeFaulty(0, true);
-        Client directNodeClient = new Client(serverList);
 
-        String expectedResponse = client.responses.get("TRUE");
-        String firstResponse = validateNetwork(name, directNodeClient);
-        String secondResponse = validateNetwork(name, directNodeClient);
+        Value expectedResponse = Value.TRUE;
+        validateNetwork(name, client);
+        Value firstResponse = coordinator.nodeObjectList.get(0).lastReply;
+        validateNetwork(name, client);
+        Value secondResponse = coordinator.nodeObjectList.get(0).lastReply;
 
         assertEquals(expectedResponse, firstResponse);
         assertNotEquals(firstResponse, secondResponse);

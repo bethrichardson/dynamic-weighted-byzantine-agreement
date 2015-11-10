@@ -48,7 +48,7 @@ public class NodeMsgHandler extends MsgHandler {
 
     @Override
     public ArrayList<String> actOnMsg(String request) {
-        return server.accessBackend(request.split(",")[1]); //currently pulling second part of request sent to allow for method
+        return server.accessBackend(request.split(",")[2]);
     }
 
 
