@@ -1,6 +1,8 @@
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -11,6 +13,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Coordinator extends Server{
     int startPort;
     ArrayList<Node> nodeObjectList;
+    Value[][] faultyMatrix;
+    List<Double> nodeWeights;
 
     public Coordinator(int startPort, int numNodes){
         super(numNodes, Utils.createServerList(startPort, 1).get(0));
@@ -19,17 +23,40 @@ public class Coordinator extends Server{
         this.numNodes = numNodes;
         this.startPort = startPort;
         nodeObjectList = new ArrayList<>();
+        faultyMatrix = new Value[numNodes][numNodes];
+        nodeWeights = new ArrayList<>(numNodes);
         createNodeSet();
 
     }
 
-    public double[] createInitialWeights(){
-        double[] w = new double[numNodes];
+    public void updateFaultyMatrix(List<String> responses) {
+        // TODO Parse out faulty lists or change input parameter to something processed
+    }
+
+    public List<Double> createInitialWeights(){
+        nodeWeights.clear();
+
         double normalizedWeight = 1.0/numNodes;
+
         for (int i = 0; i < numNodes; i++){
-            w[i] = normalizedWeight;
+            nodeWeights.add(normalizedWeight);
         }
-        return w;
+
+        return nodeWeights;
+    }
+
+    // TODO Make badass
+    public List<Double> updateWeights() {
+        for (int j = 0; j < numNodes; j++) {
+            for (int i = 0; i < numNodes; i++) {
+                if(faultyMatrix[i][j].equals(Value.TRUE)) {
+                    nodeWeights.set(j, 0.0);
+                    break;
+                }
+            }
+        }
+
+        return Utils.normalizeWeights(nodeWeights);
     }
 
     public void createNodeSet(){

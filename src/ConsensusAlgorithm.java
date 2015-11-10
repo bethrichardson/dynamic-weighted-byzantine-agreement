@@ -1,3 +1,5 @@
+import java.util.List;
+
 /**
  * Created by neelshah on 10/31/15.
  */
@@ -12,7 +14,7 @@ public class ConsensusAlgorithm {
     public double rho;
 
     // Weights
-    public double[] w;
+    public List<Double> w;
 
     // Proposed value
     public Value V;
@@ -35,7 +37,7 @@ public class ConsensusAlgorithm {
     //Message Handler for broadcasting control messages
     public MsgHandler msg;
 
-    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, double[] weights) {
+    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, List<Double> weights) {
         this.i = i;
         this.N = n;
         this.V = V;

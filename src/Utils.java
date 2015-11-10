@@ -44,4 +44,20 @@ public class Utils {
     public static Boolean isEven(int i){
         return (i & 1) == 0;
     }
+
+    public static List<Double> normalizeWeights(List<Double> weights) {
+        double sum = 0;
+        List<Double> newWeights = new ArrayList<>(weights.size());
+
+        for(Double weight : weights) {
+            sum += weight;
+            newWeights.add(weight);
+        }
+
+        for(Double weight : weights) {
+            newWeights.add(weight / sum);
+        }
+
+        return newWeights;
+    }
 }

@@ -12,7 +12,7 @@ public class Node extends Server{
     Boolean queenAlgorithm = true;
     Boolean actFaulty = false;
     Value lastReply = Value.FALSE; //Used to produce an iterating response when faulty
-    double[] weights;
+    List<Double> weights;
 
     public ArrayList<String> knownNetworks;
 
@@ -22,7 +22,7 @@ public class Node extends Server{
      * @param nodeIndex Index in node list for current node
      * @param numNodes total number of nodes
      */
-    public Node(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator, double[] initialWeights){
+    public Node(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator, List<Double> initialWeights){
         super(numNodes, coordinator);
         this.nodeIndex = nodeIndex;
         this.knownNetworks = new ArrayList<>();
