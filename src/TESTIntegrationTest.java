@@ -100,14 +100,28 @@ public class TESTIntegrationTest {
 
     @Test
     public void testCoordinatorSetsInitialNormalizedWeightsOnNodes() throws Exception {
-        double[] weights = coordinator.createInitialWeights();
+        ArrayList<Double> weights = coordinator.createInitialWeights();
         double normalizedWeight = (1.0 / numNodes);
         for(int i = 0; i < numNodes; i ++) {
-            assertEquals(weights[i], normalizedWeight, 0.001);
+            assertEquals(weights.get(i), normalizedWeight, 0.001);
         }
         for(int i = 0; i < numNodes; i ++) {
-            assertEquals(weights[i], coordinator.nodeObjectList.get(i).weights[i], 0.001);
+            assertEquals(weights.get(i), coordinator.nodeObjectList.get(i).weights.get(i), 0.001);
         }
+    }
+    
+    @Test
+    public void testAnchorWithAlphaGreaterThanOne() throws Exception {
+    	ArrayList<Double> weights = coordinator.nodeObjectList.get(0).weights;
+		weights.set(0, 0.1);
+		weights.set(1, 0.2);
+		weights.set(2, 0.3);
+		weights.set(3, 0.2);
+		weights.set(4, 0.2);
+		
+		int anchor = coordinator.nodeObjectList.get(0).queen.calculateAnchor();
+		
+		assertEquals(2, anchor);
     }
 
     public String validateNetwork(String name, Client myClient){

@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.Collections;
+
 /**
  * Created by neelshah on 10/31/15.
  */
@@ -12,8 +15,8 @@ public class ConsensusAlgorithm {
     public double rho;
 
     // Weights
-    public double[] w;
-
+    public ArrayList<Double> weights;
+ 
     // Proposed value
     public Value V;
 
@@ -35,11 +38,11 @@ public class ConsensusAlgorithm {
     //Message Handler for broadcasting control messages
     public MsgHandler msg;
 
-    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, double[] weights) {
+    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights) {
         this.i = i;
         this.N = n;
         this.V = V;
-        this.w = weights;
+        this.weights = weights;
         this.msg = msg;
     }
 
@@ -65,12 +68,33 @@ public class ConsensusAlgorithm {
             }
     }
 
-    public int calculateAlpha(){
-        // Need this
-        return 0;
+    public int calculateAnchor() {
+        	
+    	double p = rho;
+    	double sum = 0;
+    	int anchor = 0;
+    	
+    	// sorting array in ascending order
+    	Collections.sort(weights);
+    	// reverse array so highest weights are at lower index
+    	Collections.reverse(weights);
+    	
+    	for(int f = 0; f < weights.size(); f++) {
+    		sum = sum + weights.get(f);
+    		
+    		if(sum > p){
+    			anchor = f + 1;
+    			MsgHandler.debug("Rho: %f " + rho + "\n");
+
+    			MsgHandler.debug("Sum of minimum number of alphas > Rho: %f " + sum + "\n");
+    			break;
+    		}
+    	}
+        	
+        return anchor;
     }
 
-    public void run(int alpha){}
+    public void run(int anchor){}
 
     public void broadcastNormalValue(Value V) {
         msg.broadcastMsg("controlNormalValue," + V);

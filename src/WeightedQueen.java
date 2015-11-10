@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 /**
  * Created by neelshah on 10/31/15.
  */
@@ -6,34 +8,28 @@ public class WeightedQueen extends ConsensusAlgorithm {
     //Message Handler for broadcasting control messages
     private MsgHandler msg;
 
-    public WeightedQueen(int i, int n, Value V, MsgHandler msg, double[] weights) {
+    public WeightedQueen(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights) {
         super(i, n, V, msg, weights);
         rho = 1/4;
     }
 
     @Override
-    public int calculateAlpha(){
-        // Need this
-        return 0;
-    }
-
-    @Override
-    public void run(int alpha) {
-        for (int q = 1; q <= alpha; q++) {
+    public void run(int anchor) {
+        for (int q = 1; q <= anchor; q++) {
             double s0 = 0.0, s1 = 0.0;
 
             // Phase One
-            if (w[i] > 0) { //TODO: Must Broadcast value even if 0 weight to allow to redistributed weight when correct
+            if (weights.get(i) > 0) { //TODO: Must Broadcast value even if 0 weight to allow to redistributed weight when correct
                 broadcastNormalValue(V);
                 values[i] = V;
             }
 
-            for (int j = 0; j < w.length; j++) {
-                if (w[j] > 0) {  //TODO: Weights must be given to the nodes. So this will work.
+            for (int j = 0; j < weights.size(); j++) {
+                if (weights.get(j) > 0) {  //TODO: Weights must be given to the nodes. So this will work.
                     if (values[j] == Value.TRUE) {
-                        s1 += w[j];
+                        s1 += weights.get(j);
                     } else {
-                        s0 += w[j];
+                        s0 += weights.get(j);
                     }
                 }
             }

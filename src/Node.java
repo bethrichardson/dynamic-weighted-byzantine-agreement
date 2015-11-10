@@ -12,7 +12,7 @@ public class Node extends Server{
     Boolean queenAlgorithm = true;
     Boolean actFaulty = false;
     Value lastReply = Value.FALSE; //Used to produce an iterating response when faulty
-    double[] weights;
+    ArrayList<Double> weights;
 
     public ArrayList<String> knownNetworks;
 
@@ -22,7 +22,7 @@ public class Node extends Server{
      * @param nodeIndex Index in node list for current node
      * @param numNodes total number of nodes
      */
-    public Node(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator, double[] initialWeights){
+    public Node(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator, ArrayList<Double> initialWeights){
         super(numNodes, coordinator);
         this.nodeIndex = nodeIndex;
         this.knownNetworks = new ArrayList<>();
@@ -109,8 +109,8 @@ public class Node extends Server{
     public Value[] checkForFaultyNodes(ConsensusAlgorithm algorithm){
         ConsensusAlgorithm checkNodeAlgorithm;
         for (int j = 0; j < algorithm.faultySet.length; j++){
-            checkNodeAlgorithm = new ConsensusAlgorithm(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.w);
-            int alpha = algorithm.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
+            checkNodeAlgorithm = new ConsensusAlgorithm(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+            int alpha = algorithm.calculateAnchor();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
             checkNodeAlgorithm.run(alpha);
             algorithm.faultySet[j] = checkNodeAlgorithm.myValue;
         }
@@ -136,16 +136,16 @@ public class Node extends Server{
         if (queenAlgorithm){
             queen = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights);
 //        int alpha = queen.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
-//        queen.run(alpha);
+//        queen.run(anchor);
 //            queen.faultySet = checkForFaultyNodes(queen);
-            weights = queen.w;
+            weights = queen.weights;
         }
         else {
             king = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights);
 //        int alpha = king.calculateAlpha();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
-//        king.run(alpha);
+//        king.run(anchor);
 //            king.faultySet = checkForFaultyNodes(king);
-            weights = king.w;
+            weights = king.weights;
         }
 
         response.add((calculateResponse(network).toString())); //TODO: Should instead return value from consensus algorithm

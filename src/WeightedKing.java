@@ -1,35 +1,33 @@
+import java.util.ArrayList;
+
 /**
  * Created by neelshah on 10/31/15.
  */
+
+
 public class WeightedKing extends ConsensusAlgorithm {
 
-    public WeightedKing(int i, int n, Value V, MsgHandler msg, double[] weights) {
+    public WeightedKing(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights) {
         super(i, n, V, msg, weights);
     }
 
     @Override
-    public int calculateAlpha(){
-        // Need this
-        return 0;
-    }
-
-    @Override
-    public void run(int alpha) {
-        for (int k = 1; k <= alpha; k++) {
+    public void run(int anchor) {
+        for (int k = 1; k <= anchor; k++) {
             double s0 = 0.0, s1 = 0.0, su = 0.0;
 
             // Phase One
-            if (w[i] > 0) {
+            if (weights.get(i) > 0) {
                 broadcastNormalValue(V);
                 values[i] = V;
             }
 
-            for (int j = 0; j < w.length; j++) {
-                if (w[j] > 0) {
+            for (int j = 0; j < weights.size(); j++) {
+                if (weights.get(j) > 0) {
                     if (values[j] == Value.TRUE) {
-                        s1 += w[j];
+                        s1 += weights.get(j);
                     } else {
-                        s0 += w[j];
+                        s0 += weights.get(j);
                     }
                 }
             }
@@ -47,19 +45,19 @@ public class WeightedKing extends ConsensusAlgorithm {
             s1 = 0.0;
             su = 0.0;
 
-            if (w[i] > 0) {
+            if (weights.get(i) > 0) {
                 broadcastNormalValue(V);
                 values[i] = V;
             }
 
-            for (int j = 0; j < w.length; j++) {
-                if (w[j] > 0) {
+            for (int j = 0; j < weights.size(); j++) {
+                if (weights.get(j) > 0) {
                     if (values[j] == Value.TRUE) {
-                        s1 += w[j];
+                        s1 += weights.get(j);
                     } else if (values[j] == Value.FALSE) {
-                        s0 += w[j];
+                        s0 += weights.get(j);
                     } else {
-                        su += w[j];
+                        su += weights.get(j);
                     }
                 }
             }

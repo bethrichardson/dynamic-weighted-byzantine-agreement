@@ -23,13 +23,13 @@ public class Coordinator extends Server{
 
     }
 
-    public double[] createInitialWeights(){
-        double[] w = new double[numNodes];
+    public ArrayList<Double> createInitialWeights(){
+    	ArrayList<Double> weights = new ArrayList<Double>();
         double normalizedWeight = 1.0/numNodes;
         for (int i = 0; i < numNodes; i++){
-            w[i] = normalizedWeight;
+            weights.add(normalizedWeight);
         }
-        return w;
+        return weights;
     }
 
     public void createNodeSet(){
