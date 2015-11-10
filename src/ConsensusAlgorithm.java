@@ -42,7 +42,9 @@ public class ConsensusAlgorithm {
         this.i = i;
         this.N = n;
         this.V = V;
+        this.values = new Value[N];
         this.weights = weights;
+        this.faultySet = new Value[N];
         this.msg = msg;
     }
 
@@ -84,9 +86,9 @@ public class ConsensusAlgorithm {
     		
     		if(sum > p){
     			anchor = f + 1;
-    			MsgHandler.debug("Rho: %f " + rho + "\n");
+    			MsgHandler.debug("Rho: %f " + rho);
 
-    			MsgHandler.debug("Sum of minimum number of alphas > Rho: %f " + sum + "\n");
+    			MsgHandler.debug("Sum of minimum number of alphas > Rho: %f " + sum);
     			break;
     		}
     	}
@@ -96,16 +98,15 @@ public class ConsensusAlgorithm {
 
     public void run(int anchor){}
 
-    public void broadcastNormalValue(Value V) {
-        msg.broadcastMsg("controlNormalValue," + V);
+    public void broadcastValue(Value V) {
+        msg.broadcastMsg("controlSetValue," + V);
     }
 
-    public void broadcastLeaderValue(Value V) {
-        msg.broadcastMsg("controlLeaderValue," + V);
+    public Value receiveLeaderValue(int currentRound) {
+        return values[currentRound];
     }
 
-
-    public Value receiveLeaderValue() {
-        return Value.TRUE;
+    public void setNodeValue(int nodeId, Value nodeValue){
+        values[nodeId] = nodeValue;
     }
 }

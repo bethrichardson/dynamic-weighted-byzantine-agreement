@@ -20,12 +20,12 @@ public class WeightedQueen extends ConsensusAlgorithm {
 
             // Phase One
             if (weights.get(i) > 0) { //TODO: Must Broadcast value even if 0 weight to allow to redistributed weight when correct
-                broadcastNormalValue(V);
+                broadcastValue(V);
                 values[i] = V;
             }
 
             for (int j = 0; j < weights.size(); j++) {
-                if (weights.get(j) > 0) {  //TODO: Weights must be given to the nodes. So this will work.
+                if (weights.get(j) > 0) {
                     if (values[j] == Value.TRUE) {
                         s1 += weights.get(j);
                     } else {
@@ -44,10 +44,10 @@ public class WeightedQueen extends ConsensusAlgorithm {
 
             // Phase Two
             if (q == i) {
-                broadcastLeaderValue(myValue);
+                broadcastValue(myValue);
                 V = leaderValue = myValue;
             } else {
-                leaderValue = receiveLeaderValue();
+                leaderValue = receiveLeaderValue(q);
 
                 if (myWeight > 0.75) {
                     V = myValue;
