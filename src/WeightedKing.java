@@ -19,7 +19,7 @@ public class WeightedKing extends ConsensusAlgorithm {
 
             // Phase One
             if (weights.get(i) > 0) {
-                broadcastNormalValue(V);
+                broadcastValue(V);
                 values[i] = V;
             }
 
@@ -47,7 +47,7 @@ public class WeightedKing extends ConsensusAlgorithm {
             su = 0.0;
 
             if (weights.get(i) > 0) {
-                broadcastNormalValue(V);
+                broadcastValue(V);
                 values[i] = V;
             }
 
@@ -76,10 +76,10 @@ public class WeightedKing extends ConsensusAlgorithm {
 
             // Phase Three
             if (k == i) {
-                broadcastLeaderValue(myValue);
+                broadcastValue(myValue);
                 V = leaderValue = myValue;
             } else {
-                leaderValue = receiveLeaderValue();
+                leaderValue = receiveLeaderValue(k);
 
                 if (V == Value.UNDECIDED || myWeight < 0.667) {
                     if (leaderValue == Value.UNDECIDED) {

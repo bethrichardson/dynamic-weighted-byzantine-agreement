@@ -37,12 +37,18 @@ public class NodeMsgHandler extends MsgHandler {
     }
 
     @Override
-    public synchronized void handleMsg(int src, String tag, String request) {
+    public void handleMsg(int src, String tag, String request) {
+        if (tag.equals("controlPrepareRound")) {
+            server.prepareRound(request);
+        }
         if (tag.equals("controlSetAlgorithm")) {
             server.setAlgorithm(Boolean.parseBoolean(request));
         }
         if (tag.equals("controlSetFaulty")) {
             server.setFaultyBehavior(Boolean.parseBoolean(request));
+        }
+        if (tag.equals("controlSetValue")) {
+            server.algorithm.setNodeValue(src, Value.valueOf(request));
         }
     }
 

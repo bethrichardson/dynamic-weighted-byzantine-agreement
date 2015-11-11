@@ -14,7 +14,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
     }
 
     @Override
-    public synchronized void handleMsg(int src, String tag, String request) {
+    public void handleMsg(int src, String tag, String request) {
         if (tag.equals("controlSetFaulty")) {
             coordinator.createFaultyNodes(Integer.parseInt(request));
         }
@@ -23,6 +23,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
     @Override
     public ArrayList<String> actOnMsg(String request){
         ArrayList<String> response = new ArrayList<>();
+        super.broadcastMsg("controlPrepareRound," + request);
         ArrayList<String> responses = super.broadcastMsg(request);
         Boolean consensusDecision = true;
         String currentResponse;

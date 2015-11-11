@@ -120,8 +120,8 @@ public class TESTIntegrationTest {
 		weights.set(3, 0.2);
 		weights.set(4, 0.2);
 
-        node.queen = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
-		int anchor = coordinator.nodeObjectList.get(0).queen.calculateAnchor();
+        node.algorithm = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
+		int anchor = coordinator.nodeObjectList.get(0).algorithm.calculateAnchor();
 		
 		assertEquals(1, anchor);
     }
@@ -136,10 +136,23 @@ public class TESTIntegrationTest {
         weights.set(3, 0.2);
         weights.set(4, 0.2);
 
-        node.king = new WeightedKing(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
-        int anchor = coordinator.nodeObjectList.get(0).king.calculateAnchor();
+        node.algorithm = new WeightedKing(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
+        int anchor = coordinator.nodeObjectList.get(0).algorithm.calculateAnchor();
 
         assertEquals(2, anchor);
+    }
+
+    @Test
+    public void testNodeCanSendValueToOtherNode() throws Exception {
+        for(int i = 0; i < numNodes; i ++) {
+            Node node = coordinator.nodeObjectList.get(i);
+            node.algorithm = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, coordinator.createInitialWeights());
+        }
+
+        coordinator.nodeObjectList.get(0).algorithm.broadcastValue(Value.TRUE);
+        for(int i = 1; i < numNodes; i ++) {
+            assertEquals(Value.TRUE, coordinator.nodeObjectList.get(i).algorithm.values[0]);
+        }
     }
 
     public String validateNetwork(String name, Client myClient){
