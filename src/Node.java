@@ -12,6 +12,7 @@ public class Node extends Server{
     Boolean actFaulty = false;
     Value lastReply = Value.FALSE; //Used to produce an iterating response when faulty
     ArrayList<Double> weights;
+    int round;
 
     public ArrayList<String> knownNetworks;
 
@@ -28,7 +29,7 @@ public class Node extends Server{
         initNetworkList();
         this.nodeList = serverList;
         this.coordinator = coordinator;
-        this.msg = new NodeMsgHandler(this, numNodes, nodeIndex, serverList);
+        this.msg = new NodeMsgHandler(this, numNodes, nodeIndex, serverList, coordinator);
         this.weights = initialWeights;
 
 
@@ -73,24 +74,13 @@ public class Node extends Server{
         this.actFaulty = actFaulty;
     }
 
+    public void setNodeFaulty(int j, int reporter){
+        Double weight = this.algorithm.weights.get(reporter);
+        this.algorithm.setNodeSuspectWeight(j, weight);
+    }
+
     public Value returnBadAnswer(){
-        switch (lastReply){
-            case TRUE:
-                if (Utils.isEven(nodeIndex))
-                    return Value.FALSE;
-                else
-                    return Value.UNDECIDED;
-            case FALSE:
-                if (Utils.isEven(nodeIndex))
-                    return Value.UNDECIDED;
-                else
-                    return Value.TRUE;
-            default:
-                if (Utils.isEven(nodeIndex))
-                    return Value.TRUE;
-                else
-                    return Value.FALSE;
-        }
+        return Value.UNDECIDED;
     }
 
     public Value calculateResponse(String network){
@@ -105,37 +95,28 @@ public class Node extends Server{
         return reply;
     }
 
-    public Value[] checkForFaultyNodes(ConsensusAlgorithm algorithm){
+    public void checkForFaultyNodes(){
         ConsensusAlgorithm checkNodeAlgorithm;
-        for (int j = 0; j < algorithm.faultySet.length; j++){
-            checkNodeAlgorithm = new ConsensusAlgorithm(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
-            int alpha = algorithm.calculateAnchor();    //TODO: Need to get a correct alpha calculation here. and add value based on run.
-            checkNodeAlgorithm.run(alpha);
-            algorithm.faultySet[j] = checkNodeAlgorithm.myValue;
-        }
 
-        return algorithm.faultySet;
+        algorithm.gatherFaultyNodes();
+
+        for (int j = 0; j < algorithm.faultySet.length; j++){
+            checkNodeAlgorithm = new WeightedQueen(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+            int anchor = algorithm.calculateAnchor();
+
+            for (int k = 0; k < anchor; k++) {
+                checkNodeAlgorithm.runPhaseOne();
+                checkNodeAlgorithm.runPhaseTwo();
+                checkNodeAlgorithm.runLeaderPhase(k);
+            }
+                algorithm.faultySet[j] = checkNodeAlgorithm.V;
+        }
     }
 
     public void updateWeights(){
         //TODO: Update weights based on algorithm.faultySet
     }
 
-    public void setValueForNode(int nodeId, Value nodeValue, ConsensusAlgorithm algorithm){
-        algorithm.setNodeValue(nodeId, nodeValue);
-    }
-
-    public void prepareRound(String network){
-        MsgHandler.debug("Accessing backend for node " + Integer.toString(nodeIndex) + " with request: " + network);
-        Value initialResponse = calculateResponse(network);
-
-        if (queenAlgorithm){
-            algorithm = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights);
-        }
-        else {
-            algorithm = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights);
-        }
-    }
 
     /**
      * Creates node responses for the Server class
@@ -144,13 +125,62 @@ public class Node extends Server{
      * @return String response to send back to client
      */
     public ArrayList<String> accessBackend(String network){
+        Value initialResponse = calculateResponse(network);
+
+        if (queenAlgorithm){
+            algorithm = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights);
+        }
+        else {
+            algorithm = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights);
+        }
+
         ArrayList<String> response = new ArrayList<>();
         int anchor = algorithm.calculateAnchor();
-        algorithm.run(anchor);
-        algorithm.faultySet = checkForFaultyNodes(algorithm);
+        for (int k = 0; k < anchor; k++) {
+            algorithm.runPhaseOne();
+            algorithm.runPhaseTwo();
+            algorithm.runLeaderPhase(k);
+        }
+        checkForFaultyNodes();
+        updateWeights(); //TODO: Update the weights based on algorithm.faultySet
         weights = algorithm.weights;
 
-        response.add((calculateResponse(network).toString())); //TODO: Should instead return value from consensus algorithm
+        msg.sendMsg(MessageType.FinalValue, algorithm.V.toString(), -1, false);
         return response;
+    }
+
+    public static void main (String[] args) {
+        InputReader reader = new InputReader();
+
+        ArrayList<Integer> serverConfig = reader.inputNodeConfig();
+
+        int startPort = serverConfig.get(0);
+        int numNodes = serverConfig.get(1);
+        List<InetSocketAddress> nodeList;
+        InetSocketAddress coordinator = Utils.createServerList(startPort, 1).get(0);
+        ArrayList<Thread> nodeThreadList;
+
+        ArrayList<Double> weights = new ArrayList<Double>();
+        double normalizedWeight = 1.0/numNodes;
+        for (int i = 0; i < numNodes; i++){
+            weights.add(normalizedWeight);
+        }
+
+        //Set up node pool
+
+            nodeList = Utils.createServerList(startPort + 1, numNodes); //init to all nodes
+            nodeThreadList = new ArrayList<>();
+            for (int i = 0; i < numNodes; i++){
+                try {
+                    ServerThread t = new ServerThread(nodeList, i, numNodes, coordinator, weights);
+                    nodeThreadList.add(t);
+                    t.start();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
     }
 }

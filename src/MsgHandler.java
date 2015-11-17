@@ -1,33 +1,41 @@
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import javax.json.Json;
+import javax.json.JsonBuilderFactory;
+import javax.json.JsonObject;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class MsgHandler {
     int numServers;
     List<InetSocketAddress> serverList;
     int nodeIndex;
+    InetSocketAddress coordinator;
 
-    public MsgHandler(int numServers, List<InetSocketAddress> serverList, int nodeIndex){
+    public MsgHandler(int numServers, List<InetSocketAddress> serverList, int nodeIndex, InetSocketAddress coordinator){
         this.numServers = numServers;
         this.serverList = serverList;
         this.nodeIndex = nodeIndex;
+        this.coordinator = coordinator;
     }
 
     public InetSocketAddress getNode(int serverIndex){
         return serverList.get(serverIndex);
     }
 
-    public ArrayList<String> broadcastMsg(String request) {
+    public ArrayList<String> broadcastMsg(MessageType messagetype, String request, Boolean expectResponse) {
         ArrayList<String> responses = new ArrayList<>();
-        MsgHandler.debug("Broadcasting: " + request);
+        MsgHandler.debug("Broadcasting: " + messagetype.toString()  + ":" + request);
         for (int i = 0; i < numServers; i++) {
-            responses.add(sendMsg(request, i));
+            SendMessageThread sendThread = new SendMessageThread(this, i, coordinator, messagetype, request, expectResponse);
+
+            sendThread.start();
         }
         return responses;
     }
@@ -38,16 +46,40 @@ public class MsgHandler {
         }
     }
 
-    public String sendMsg(String request, int serverId){
-        InetSocketAddress server = getNode(serverId);
-        String response = "";
-        request = Integer.toString(nodeIndex) + "," + request;
-        try {
-            return makeServerRequest(server, request, true);
-        } catch (IOException e) {
-            System.out.println(e.getLocalizedMessage());
+    public static JsonObject buildPayload(MessageType messageType, String request, int serverId, int nodeIndex){
+        Map<String, Object> config = new HashMap<String, Object>();
+        //if you need pretty printing
+        config.put("javax.json.stream.JsonGenerator.prettyPrinting", Boolean.valueOf(true));
+        JsonBuilderFactory factory = Json.createBuilderFactory(config);
+        JsonObject payload = factory.createObjectBuilder()
+                .add("MessageType", messageType.toString())
+                .add("Request", request)
+                .add("ServerID", serverId)
+                .add("SendingID", nodeIndex)
+                .build();
+
+        return payload;
+    }
+
+    public String sendMsg(MessageType messageType, String request, int serverId, Boolean expectResponse){
+        InetSocketAddress server;
+        String serverRequest;
+        String response = "[]";
+        if (request != null) {
+            if (serverId == -1) {
+                server = coordinator;
+            } else {
+                server = getNode(serverId);
+            }
+
+            serverRequest = buildPayload(messageType, request, serverId, this.nodeIndex).toString();
+            try {
+                return makeServerRequest(server, serverRequest, expectResponse);
+            } catch (IOException e) {
+                System.out.println(e.getLocalizedMessage());
+            }
         }
-        return response;
+            return response;
     }
 
     /**
@@ -86,36 +118,34 @@ public class MsgHandler {
 
         return retValue;
     }
-    public void interpretMessage(String request){
-        ArrayList<String> requestList =  Utils.interpretStringAsList(request);
-        handleMsg(Integer.parseInt(requestList.get(0)), requestList.get(1), requestList.get(2));
-    }
-
-    public void handleMsg(int src, String tag, String request) {
-
-    }
-
-    public ArrayList<String> actOnMsg(String request){
+    public ArrayList<String> interpretMessage(String request){
         ArrayList<String> response = new ArrayList<>();
-        response.add("done");
+        try {
+            JSONObject obj = new JSONObject(request);
+            int sendingId = obj.getInt("SendingID");
+            MessageType messageType = MessageType.valueOf(obj.getString("MessageType"));
+            String requestString = obj.getString("Request");
+
+            MsgHandler.debug("Accessing from node: " + sendingId + ", to node: " + Integer.toString(nodeIndex) +
+                    " with request: " + messageType.toString() + " " + requestString);
+
+
+            if (messageType == MessageType.ClientRequest){
+                response = actOnMsg(requestString);
+            }
+            else {
+                handleControlMessage(sendingId, messageType, requestString);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         return response;
     }
 
-    public ArrayList<String> routeMessage(String request){
-        ArrayList<String> requestList =  Utils.interpretStringAsList(request);
+    public void handleControlMessage(int src, MessageType messageType, String request) {}
+
+    public ArrayList<String> actOnMsg(String request){
         ArrayList<String> response = new ArrayList<>();
-        String method = requestList.get(1);
-
-        MsgHandler.debug("Accessing node " + Integer.toString(nodeIndex) + " with request: " + request);
-
-        if (method.contains("control")){
-            response.add("done");
-            interpretMessage(request); //Control messages should be sent through here
-        }
-        else {
-            response = actOnMsg(request);
-        }
-
         return response;
     }
 }

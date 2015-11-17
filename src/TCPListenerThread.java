@@ -38,32 +38,23 @@ public class TCPListenerThread extends Thread {
     }
 
     /**
-     * Listener thread listens for either UDP or TCP client connections
-     *
-     * @param node The backend node to perform requests against
-     * @param tcpPort The TCP port to listen upon
-     * @param udpPort The UDP port to listen upon
-     * @param tcpThread Is this a TCP listener thread
-     */
-    /**
-     * Listen for incoming TCP requests and create a ServerThread to handle
+     * Listen for incoming TCP requests and create a ResponseThread to handle
      * any incoming requests to backend. Pass off the socket for each new request to
-     * a new ServerThread to read the request and send response.
+     * a new ResponseThread to read the request and send response.
      */
     public void createSocketAndThread() {
         try {
             Socket s;
             while ( (s = tcpListener.accept()) != null) {
                 numThreads++;
-                Thread t = new ServerThread(msg, s, threadList.size() + 1);
+                Thread t = new ResponseThread(msg, s, threadList.size() + 1);
                 threadList.add(t);
-//                System.out.println("Creating TCP thread: " + Integer.toString(threadList.size()));
                 t.start();
             }
             createSocketAndThread();
 
         } catch (IOException e) {
-//            System.err.println("Server aborted in socket thread" +  Integer.toString(numThreads) + " for port:" + Integer.toString(port) + e);
+            //DO nothing.
         }
     }
 

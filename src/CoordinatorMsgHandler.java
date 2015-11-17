@@ -1,47 +1,64 @@
+import com.sun.corba.se.impl.io.ValueUtility;
+
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by brichardson on 11/7/15.
  */
 public class CoordinatorMsgHandler extends MsgHandler {
     Coordinator coordinator;
+    ArrayList<String> responses;
 
     public CoordinatorMsgHandler(Coordinator coordinator, int numServers, List<InetSocketAddress> serverList){
-        super(numServers, serverList, -1);
+        super(numServers, serverList, -1, coordinator.coordinator);
         this.coordinator = coordinator;
+        responses = new ArrayList<>();
     }
 
     @Override
-    public void handleMsg(int src, String tag, String request) {
-        if (tag.equals("controlSetFaulty")) {
+    public void handleControlMessage(int src, MessageType messageType, String request) {
+        if (messageType == MessageType.SetFaulty) {
             coordinator.createFaultyNodes(Integer.parseInt(request));
         }
+        if (messageType == MessageType.FinalValue) {
+            responses.add(request);
+        }
+    }
+
+    public Value determineConsensus(){
+        double s0 = 0.0; double s1 = 0.0;
+        Value currentResponse;
+        for (int i = 0; i < responses.size(); i++){
+            currentResponse = Value.valueOf(responses.get(i));
+            MsgHandler.debug("Received from node " + Integer.toString(i) + ": " + currentResponse);
+            if (currentResponse == Value.TRUE) s0++;
+            if (currentResponse == Value.FALSE) s1++;
+        }
+        if (s0 >= 3.0/4) return Value.TRUE;
+        if (s1 >= 3.0/4) return Value.FALSE;
+        else return Value.UNDECIDED;
     }
 
     @Override
     public ArrayList<String> actOnMsg(String request){
-        ArrayList<String> response = new ArrayList<>();
-        super.broadcastMsg("controlPrepareRound," + request);
-        ArrayList<String> responses = super.broadcastMsg(request);
-        Boolean consensusDecision = true;
-        String currentResponse;
-        for (int i = 0; i < responses.size(); i++){
-            responses.set(i, responses.get(i).replaceAll("\\[", "").replaceAll("\\]", ""));
-            currentResponse = responses.get(i);
-            MsgHandler.debug("Received from node " + Integer.toString(i) + ": " + currentResponse);
-            if (i > 0){
-                consensusDecision = (currentResponse.equals(responses.get(i-1))); //TODO: determine consensus
-            }
+        ArrayList<String> responseToClient = new ArrayList<>();
+        responses = new ArrayList<>();
+        super.broadcastMsg(MessageType.ClientRequest, request, false);
+
+        Utils.timedWait(7000, "Waiting in Coordinator for responses.");
+
+        Value response = determineConsensus();
+        if (response != Value.UNDECIDED) {
+            responseToClient.add(response.toString());
         }
-        if (consensusDecision) {
-            response.add(responses.get(0));
+        else if (!coordinator.failed){
+            coordinator.setAlgorithm(false);
+            return actOnMsg(request);
         }
         else {
-            coordinator.setAlgorithm(false);
-            actOnMsg(request);
+            throw new RuntimeException("Consensus Algorithm failed after failing over to Weighted King Algorithm.");
         }
-        return response;
+        return responseToClient;
     }
 }

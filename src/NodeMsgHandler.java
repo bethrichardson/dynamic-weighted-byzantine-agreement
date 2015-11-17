@@ -1,3 +1,6 @@
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -9,53 +12,53 @@ import java.util.List;
 public class NodeMsgHandler extends MsgHandler {
     Node server;
     int serverIndex;
+    InetSocketAddress coordinator;
 
-    public NodeMsgHandler(Node server, int numServers, int serverIndex, List<InetSocketAddress> serverList) {
-        super(numServers, serverList, serverIndex);
+    public NodeMsgHandler(Node server, int numServers, int serverIndex, List<InetSocketAddress> serverList, InetSocketAddress coordinator) {
+        super(numServers, serverList, serverIndex, coordinator);
         this.server = server;
         this.serverIndex = serverIndex;
+        this.coordinator = coordinator;
     }
 
     @Override
-    public ArrayList<String> broadcastMsg(String request) {
+    public ArrayList<String> broadcastMsg(MessageType messageType, String request, Boolean expectResponse) {
         ArrayList<String> responses = new ArrayList<>();
-        MsgHandler.debug("Broadcasting: " + request);
+        MsgHandler.debug("Broadcasting: " + messageType.toString()  + ":" + request);
         for (int i = 0; i < numServers; i++) {
             if (i != nodeIndex)
-                responses.add(sendMsg(request, i));
+                responses.add(sendMsg(messageType, request, i, expectResponse));
         }
         return responses;
     }
 
-    public void sendMsgToCoordinator(String request){
-        InetSocketAddress coordinator = server.coordinator;
-        try {
-            super.makeServerRequest(coordinator, request, false);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     @Override
-    public void handleMsg(int src, String tag, String request) {
-        if (tag.equals("controlPrepareRound")) {
-            server.prepareRound(request);
-        }
-        if (tag.equals("controlSetAlgorithm")) {
+    public void handleControlMessage(int src, MessageType messageType, String request) {
+        if (messageType == MessageType.SetAlgorithm) {
             server.setAlgorithm(Boolean.parseBoolean(request));
         }
-        if (tag.equals("controlSetFaulty")) {
+        if (messageType == MessageType.SetFaulty) {
             server.setFaultyBehavior(Boolean.parseBoolean(request));
         }
-        if (tag.equals("controlSetValue")) {
-            server.algorithm.setNodeValue(src, Value.valueOf(request));
+        if (messageType == MessageType.FaultyNode) {
+            server.setNodeFaulty(Integer.parseInt(request), src);
+        }
+        if (messageType == MessageType.SetValue) {
+            try {
+                server.algorithm.setNodeValue(src, Value.valueOf(request));
+            }
+            catch(Exception e){
+                System.out.println(e.getMessage());
+                server.algorithm.setNodeValue(src, Value.UNDECIDED); //set bad values to Undecided
+            }
         }
     }
 
     @Override
     public ArrayList<String> actOnMsg(String request) {
-        return server.accessBackend(request.split(",")[2]);
+        ArrayList<String> response = new ArrayList<>();
+
+        server.accessBackend(request.split(",")[1]);
+        return response;
     }
-
-
 }
