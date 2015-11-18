@@ -1,8 +1,6 @@
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import javax.json.Json;
 import javax.json.JsonBuilderFactory;
+import javax.json.JsonException;
 import javax.json.JsonObject;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -121,7 +119,7 @@ public class MsgHandler {
     public ArrayList<String> interpretMessage(String request){
         ArrayList<String> response = new ArrayList<>();
         try {
-            JSONObject obj = new JSONObject(request);
+            JsonObject obj = Utils.jsonFromString(request);
             int sendingId = obj.getInt("SendingID");
             MessageType messageType = MessageType.valueOf(obj.getString("MessageType"));
             String requestString = obj.getString("Request");
@@ -136,7 +134,7 @@ public class MsgHandler {
             else {
                 handleControlMessage(sendingId, messageType, requestString);
             }
-        } catch (JSONException e) {
+        } catch (JsonException e) {
             e.printStackTrace();
         }
         return response;
