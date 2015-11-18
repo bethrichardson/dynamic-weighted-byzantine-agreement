@@ -11,6 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Coordinator extends Server{
     int startPort;
     ArrayList<Node> nodeObjectList;
+    Boolean failed = false;
 
     public Coordinator(int startPort, int numNodes){
         super(numNodes, Utils.createServerList(startPort, 1).get(0));
@@ -19,7 +20,7 @@ public class Coordinator extends Server{
         this.numNodes = numNodes;
         this.startPort = startPort;
         nodeObjectList = new ArrayList<>();
-        createNodeSet();
+        establishCommunication();
 
     }
 
@@ -32,11 +33,7 @@ public class Coordinator extends Server{
         return weights;
     }
 
-    public void createNodeSet(){
-        for (int i = 0; i < numNodes; i++){
-            nodeObjectList.add(new Node(nodeList, i, numNodes, coordinator, createInitialWeights()));
-        }
-
+    public void establishCommunication(){
         this.msg = new CoordinatorMsgHandler(this, numNodes, nodeList);
 
         //Set up listener thread for TCP
@@ -50,15 +47,15 @@ public class Coordinator extends Server{
     }
 
     public void setAlgorithm(Boolean queenAlgorithm){
-        msg.broadcastMsg("controlSetAlgorithm," + Boolean.toString(queenAlgorithm));
+        msg.broadcastMsg(MessageType.SetAlgorithm, Boolean.toString(queenAlgorithm), false);
     }
 
     public void setNodeFaulty(Integer i, Boolean actFaulty){
-        msg.sendMsg("controlSetFaulty," + Boolean.toString(actFaulty), i);
+        msg.sendMsg(MessageType.SetFaulty, Boolean.toString(actFaulty), i, false);
     }
 
     public void resetFaultyNodes(){
-        msg.broadcastMsg("controlSetFaulty," + Boolean.toString(false));
+        msg.broadcastMsg(MessageType.SetFaulty, Boolean.toString(false), false);
     }
 
     public ArrayList<Integer> selectFaultyNodes(int numFaultyNodes){
@@ -80,20 +77,13 @@ public class Coordinator extends Server{
 
     public void createFaultyNodes(int numFaultyNodes){
         resetFaultyNodes();
+        Utils.timedWait(100, "Waiting for all nodes to become non-faulty.");
 
         ArrayList<Integer> faultyNodes = selectFaultyNodes(numFaultyNodes);
 
         for (int i = 0; i < numFaultyNodes; i++){
             setNodeFaulty(faultyNodes.get(i), true);
         }
-    }
-
-    @Override
-    public void shutDown() throws IOException {
-        for (int i = 0; i < numNodes; i++){
-            nodeObjectList.get(i).shutDown();
-        }
-        super.shutDown();
     }
 
     public static void main (String[] args) {
@@ -104,7 +94,6 @@ public class Coordinator extends Server{
         int startPort = serverConfig.get(0);
         int numNodes = serverConfig.get(1);
 
-        //Set up node pool
         new Coordinator(startPort, numNodes);
     }
 

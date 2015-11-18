@@ -1,4 +1,4 @@
-
+import javax.json.JsonObject;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.ConnectException;
@@ -39,7 +39,7 @@ public class Client {
      *
      * @param request request to send to the node
      */
-    private ArrayList<String> tcpRequest(String request){
+    private ArrayList<String> tcpRequest(JsonObject request){
         String retstring = "[]";
         try {
             retstring =  makeTCPRequest(request);
@@ -87,9 +87,11 @@ public class Client {
     public ArrayList<String> validateNetwork(String network) {
         String request = "validateNetwork," + network;
 
+        JsonObject payload = MsgHandler.buildPayload(MessageType.ClientRequest, request, -1, -2);
+
         System.out.println("Attempting to validate network " + network + ".");
 
-        return sendRequest(request);
+        return sendRequest(payload);
     }
 
 
@@ -99,7 +101,7 @@ public class Client {
      *
      * @param request the request string formatted for node
      */
-    private ArrayList<String> sendRequest(String request){
+    private ArrayList<String> sendRequest(JsonObject request){
         ArrayList<String>response;
 
         response = tcpRequest(request);
@@ -135,10 +137,10 @@ public class Client {
      * @return the response from the node
      * @throws IOException
      */
-    public String makeTCPRequest(String request)
+    public String makeTCPRequest(JsonObject request)
             throws IOException {
         getSocket();
-        pout.println(request);
+        pout.println(request.toString());
         pout.flush();
         String retValue = din.nextLine();
         tcpserver.close();
