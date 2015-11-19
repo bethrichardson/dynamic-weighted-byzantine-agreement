@@ -14,7 +14,7 @@ public class WeightedKing extends ConsensusAlgorithm {
 
     @Override
     public void runPhaseOne(){
-        double s0 = 0.0, s1 = 0.0, su = 0.0;
+        double s0 = 0.0, s1 = 0.0;
 
         // Phase One
         if (weights.get(i) > 0) {

@@ -1,4 +1,7 @@
-import java.net.*; import java.io.*; import java.util.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.Scanner;
 public class ResponseThread extends Thread {
     MsgHandler msg;
     Socket theClient;

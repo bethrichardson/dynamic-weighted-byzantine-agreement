@@ -1,7 +1,4 @@
-import sun.plugin2.message.Message;
-
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 
 public class SendMessageThread extends Thread {
     MsgHandler msg;
