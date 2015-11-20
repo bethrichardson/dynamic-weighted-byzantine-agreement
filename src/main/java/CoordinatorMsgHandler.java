@@ -45,7 +45,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
         responses = new ArrayList<>();
         super.broadcastMsg(MessageType.ClientRequest, request, false);
 
-        Utils.timedWait(7000, "Waiting in Coordinator for responses.");
+        Utils.timedWait(10000, "Waiting in Coordinator for responses.");
 
         Value response = determineConsensus();
         if (response != Value.UNDECIDED) {

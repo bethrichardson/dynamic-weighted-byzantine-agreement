@@ -43,7 +43,11 @@ public class ConsensusAlgorithm {
 
     public int numNodesToWaitFor;
 
-    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, List<Double> weights, int numNodesToWaitFor) {
+
+    public boolean actFaulty;
+
+    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, List<Double> weights, int numNodesToWaitFor,
+                              Boolean actFaulty) {
         this.i = i;
         this.N = n;
         this.V = V;
@@ -53,10 +57,13 @@ public class ConsensusAlgorithm {
         this.msg = msg;
         this.numNodesToWaitFor = numNodesToWaitFor;
         this.suspectWeight = new Double[N];
+        this.actFaulty = actFaulty;
         for (int j = 0; j < N; j++) suspectWeight[j] = 0.0;
     }
 
     public void setNodeSuspectWeight(int j, Double weight){
+        MsgHandler.debug("Node suspect weight update for node: " + Integer.toString(j) +
+                ". Adding weight: " + Double.toString(weight));
         suspectWeight[j] += weight;
     }
 
@@ -67,15 +74,21 @@ public class ConsensusAlgorithm {
 
 
     public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
-        MsgHandler.debug("Node " + i + "is checking for faulty node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
-
+        MsgHandler.debug("Node " + this.i + " received value " + receivedValue + " from node " + j);
+        String faultyMessage = "Node " + this.i + " identified node " + Integer.toString(j) + " as faulty node";
         if (myWeight > 3/4 && receivedValue != myValue && round == j){
+            MsgHandler.debug(faultyMessage + " because of bad leader value.");
+//            broadcastFaulty(j);
             return Value.TRUE;
         }
         else if (queenAlgorithm && values[j] == Value.UNDECIDED){
+            MsgHandler.debug(faultyMessage + " because of undecided value.");
+//            broadcastFaulty(j);
             return Value.TRUE;
         }
         else if (values[j] == null){
+            MsgHandler.debug(faultyMessage + " because of null value.");
+//            broadcastFaulty(j);
             return Value.TRUE;
         }
         else {
@@ -101,6 +114,7 @@ public class ConsensusAlgorithm {
     public void gatherFaultyNodes() {
         for (int j = 0; j < weights.size(); j++) {
             if (faultySet[j] == Value.TRUE) {
+                MsgHandler.debug("Node " + Integer.toString(i) + " broadcasting faulty node: " + Integer.toString(j));
                 broadcastFaulty(j);
             }
         }
@@ -108,6 +122,8 @@ public class ConsensusAlgorithm {
         waitForValues();
 
         for (int j = 0; j < weights.size(); j++) {
+            MsgHandler.debug("Node " + Integer.toString(i) + " sees suspectWeight for node " + Integer.toString(j)
+             + " to be " + Double.toString(suspectWeight[j]));
             if (suspectWeight[j] >= 1.0/4) {
                 faultySet[j] = Value.TRUE;
             }
@@ -143,7 +159,10 @@ public class ConsensusAlgorithm {
     public void runLeaderPhase(int round){}
 
     public void broadcastValue(Value V) {
-        msg.broadcastMsg(MessageType.SetValue, V.toString(), false);
+        if (!actFaulty)
+            msg.broadcastMsg(MessageType.SetValue, V.toString(), false);
+        else
+            msg.broadcastMsg(MessageType.SetValue, Value.UNDECIDED.toString(), false);
     }
 
     public Value receiveLeaderValue(int currentRound) {

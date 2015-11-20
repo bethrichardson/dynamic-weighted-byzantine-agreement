@@ -110,7 +110,7 @@ public class TESTIntegrationTest {
         Utils.timedWait(delay, "TEST: Wait on message to nodes.");
 
         validateNetwork(name, client);
-        Utils.timedWait(5000, "TEST: Wait on message to nodes.");
+        Utils.timedWait(15000, "TEST: Wait on message to nodes.");
 
         for (int i = 0; i < numNodes; i++) {
             assertEquals(Value.TRUE, nodeList.get(i).node.algorithm.faultySet[0]);
@@ -119,7 +119,7 @@ public class TESTIntegrationTest {
 
     @Ignore("Depends on testFaultyNodeIsDetected working correctly")
     @Test
-    public void testUpdateWeights() throws Exception {
+    public void testWeightIsSetToZeroForFaultyNode() throws Exception {
         String name = "banana";
         coordinator.setNodeFaulty(0, true);
 
@@ -196,7 +196,7 @@ public class TESTIntegrationTest {
 		weights.set(4, 0.1);
         weights.set(5, 0.1);
 
-        node.algorithm = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
+        node.algorithm = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights, false);
 		int anchor = nodeList.get(0).node.algorithm.calculateAnchor();
 
 		assertEquals(1, anchor);
@@ -213,7 +213,7 @@ public class TESTIntegrationTest {
         weights.set(4, 0.1);
         weights.set(5, 0.1);
 
-        node.algorithm = new WeightedKing(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights);
+        node.algorithm = new WeightedKing(node.nodeIndex, numNodes, Value.TRUE, node.msg, weights, false);
         int anchor = nodeList.get(0).node.algorithm.calculateAnchor();
 
         assertEquals(2, anchor);
@@ -234,7 +234,8 @@ public class TESTIntegrationTest {
     public void testNodeCanSendValueToOtherNode() throws Exception {
         for(int i = 0; i < numNodes; i ++) {
             Node node = nodeList.get(i).node;
-            node.algorithm = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg, coordinator.createInitialWeights());
+            node.algorithm = new WeightedQueen(node.nodeIndex, numNodes, Value.TRUE, node.msg,
+                    coordinator.createInitialWeights(), false);
         }
 
         nodeList.get(0).node.algorithm.broadcastValue(Value.TRUE);

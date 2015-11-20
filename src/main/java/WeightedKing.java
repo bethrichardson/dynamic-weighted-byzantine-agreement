@@ -7,8 +7,9 @@ import java.util.List;
 
 public class WeightedKing extends ConsensusAlgorithm {
 
-    public WeightedKing(int i, int n, Value V, MsgHandler msg, List<Double> weights) {
-        super(i, n, V, msg, weights, (2 * n)/3);
+
+    public WeightedKing(int i, int n, Value V, MsgHandler msg, List<Double> weights, Boolean actFaulty) {
+        super(i, n, V, msg, weights, (2 * n)/3, actFaulty);
         rho = 1.0/3;
     }
 
@@ -97,6 +98,7 @@ public class WeightedKing extends ConsensusAlgorithm {
             }
         }
     }
+
 
     @Override
     public void runFaultyNodePhase(int round) {
