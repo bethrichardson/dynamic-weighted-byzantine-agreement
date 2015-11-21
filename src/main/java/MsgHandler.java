@@ -29,7 +29,7 @@ public class MsgHandler {
 
     public ArrayList<String> broadcastMsg(MessageType messagetype, String request, Boolean expectResponse) {
         ArrayList<String> responses = new ArrayList<>();
-        MsgHandler.debug("Broadcasting: " + messagetype.toString()  + ":" + request);
+        MsgHandler.debug("Broadcasting from Node " + nodeIndex + ": " + messagetype.toString()  + ":" + request);
         for (int i = 0; i < numServers; i++) {
             SendMessageThread sendThread = new SendMessageThread(this, i, coordinator, messagetype, request, expectResponse);
 

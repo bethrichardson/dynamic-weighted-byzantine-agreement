@@ -1,5 +1,5 @@
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * Created by neelshah on 10/31/15.
@@ -15,7 +15,7 @@ public class ConsensusAlgorithm {
     public double rho;
 
     // Weights
-    public ArrayList<Double> weights;
+    public List<Double> weights;
  
     // Proposed value
     public Value V;
@@ -43,7 +43,7 @@ public class ConsensusAlgorithm {
 
     public int numNodesToWaitFor;
 
-    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights, int numNodesToWaitFor) {
+    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, List<Double> weights, int numNodesToWaitFor) {
         this.i = i;
         this.N = n;
         this.V = V;
@@ -67,6 +67,8 @@ public class ConsensusAlgorithm {
 
 
     public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
+        MsgHandler.debug("Node " + i + "is checking for faulty node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
+
         if (myWeight > 3/4 && receivedValue != myValue && round == j){
             return Value.TRUE;
         }
@@ -82,10 +84,14 @@ public class ConsensusAlgorithm {
     }
 
     public void runFaultyNodePhase(int round, Boolean queenAlgorithm) {
-            //Check for faulty nodes
-            for (int j = 0; j < values.length; j++) {
-                setNodeFaultyState(j, checkForFaultyNode(values[j], j, round, queenAlgorithm));
-            }
+        //Check for faulty nodes
+        for (int j = 0; j < values.length; j++) {
+            setNodeFaultyState(j, checkForFaultyNode(values[j], j, round, queenAlgorithm));
+        }
+    }
+
+    public void runFaultyNodePhase(int round) {
+        runFaultyNodePhase(round, false);
     }
 
     public void broadcastFaulty(int j) {
@@ -98,6 +104,7 @@ public class ConsensusAlgorithm {
                 broadcastFaulty(j);
             }
         }
+
         waitForValues();
 
         for (int j = 0; j < weights.size(); j++) {

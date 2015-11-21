@@ -20,7 +20,7 @@ public class NodeMsgHandler extends MsgHandler {
     @Override
     public ArrayList<String> broadcastMsg(MessageType messageType, String request, Boolean expectResponse) {
         ArrayList<String> responses = new ArrayList<>();
-        MsgHandler.debug("Broadcasting: " + messageType.toString()  + ":" + request);
+        MsgHandler.debug("Broadcasting from Node " + nodeIndex + ": " + messageType.toString()  + ":" + request);
         for (int i = 0; i < numServers; i++) {
             if (i != nodeIndex)
                 responses.add(sendMsg(messageType, request, i, expectResponse));
