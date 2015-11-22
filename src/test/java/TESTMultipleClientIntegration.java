@@ -1,10 +1,11 @@
-import java.util.List;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import static org.junit.Assert.*;
-
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
 
 public class TESTMultipleClientIntegration {
     List<InetSocketAddress> serverList;

@@ -1,11 +1,11 @@
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by neelshah on 10/31/15.
  */
 public class WeightedQueen extends ConsensusAlgorithm {
 
-    public WeightedQueen(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights) {
+    public WeightedQueen(int i, int n, Value V, MsgHandler msg, List<Double> weights) {
         super(i, n, V, msg, weights, (3 * n)/4);
         rho = 1.0/4;
     }
@@ -46,22 +46,24 @@ public class WeightedQueen extends ConsensusAlgorithm {
 
     @Override
     public void runLeaderPhase(int q) {
-            // Phase Two
-            if (q == i) {
-                broadcastValue(myValue);
-                V = leaderValue = myValue;
+        // Phase Two
+        if (q == i) {
+            broadcastValue(myValue);
+            V = leaderValue = myValue;
+        } else {
+            waitForValues();
+            leaderValue = receiveLeaderValue(q);
+
+            if (myWeight > 0.75) {
+                V = myValue;
             } else {
-                waitForValues();
-                leaderValue = receiveLeaderValue(q);
-
-                if (myWeight > 0.75) {
-                    V = myValue;
-                } else {
-                    V = leaderValue;
-                }
+                V = leaderValue;
             }
+        }
+    }
 
-            //Check for faulty nodes
-            super.runFaultyNodePhase(q, true);
+    @Override
+    public void runFaultyNodePhase(int round) {
+        super.runFaultyNodePhase(round, true);
     }
 }

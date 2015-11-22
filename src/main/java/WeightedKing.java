@@ -1,4 +1,4 @@
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by neelshah on 10/31/15.
@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 public class WeightedKing extends ConsensusAlgorithm {
 
-    public WeightedKing(int i, int n, Value V, MsgHandler msg, ArrayList<Double> weights) {
+    public WeightedKing(int i, int n, Value V, MsgHandler msg, List<Double> weights) {
         super(i, n, V, msg, weights, (2 * n)/3);
         rho = 1.0/3;
     }
@@ -80,25 +80,26 @@ public class WeightedKing extends ConsensusAlgorithm {
 
     @Override
     public void runLeaderPhase(int k) {
-            if (k == i) {
-                broadcastValue(myValue);
-                V = leaderValue = myValue;
-            } else {
-                waitForValues();
+        if (k == i) {
+            broadcastValue(myValue);
+            V = leaderValue = myValue;
+        } else {
+            waitForValues();
 
-                leaderValue = receiveLeaderValue(k);
+            leaderValue = receiveLeaderValue(k);
 
-                if (V == Value.UNDECIDED || myWeight < 0.667) {
-                    if (leaderValue == Value.UNDECIDED) {
-                        V = Value.TRUE;
-                    } else {
-                        V = leaderValue;
-                    }
+            if (V == Value.UNDECIDED || myWeight < 0.667) {
+                if (leaderValue == Value.UNDECIDED) {
+                    V = Value.TRUE;
+                } else {
+                    V = leaderValue;
                 }
             }
-
-            //Check for faulty nodes
-            super.runFaultyNodePhase(k, false);
+        }
     }
 
+    @Override
+    public void runFaultyNodePhase(int round) {
+        runFaultyNodePhase(round, false);
+    }
 }

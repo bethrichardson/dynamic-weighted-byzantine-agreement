@@ -2,6 +2,7 @@
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Node extends Server{
@@ -11,7 +12,7 @@ public class Node extends Server{
     Boolean queenAlgorithm = true;
     Boolean actFaulty = false;
     Value lastReply = Value.FALSE; //Used to produce an iterating response when faulty
-    ArrayList<Double> weights;
+    List<Double> weights;
     int round;
 
     public ArrayList<String> knownNetworks;
@@ -34,7 +35,7 @@ public class Node extends Server{
 
 
         this.node = msg.getNode(nodeIndex);
-        MsgHandler.debug("Node configured at " + node.toString());
+        MsgHandler.debug("Node " + nodeIndex + " configured at " + node.toString());
 
         //Set up listener thread for TCP
         try {
@@ -101,20 +102,33 @@ public class Node extends Server{
         algorithm.gatherFaultyNodes();
 
         for (int j = 0; j < algorithm.faultySet.length; j++){
-            checkNodeAlgorithm = new WeightedQueen(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+            if (queenAlgorithm){
+                checkNodeAlgorithm = new WeightedQueen(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+            }
+            else {
+                checkNodeAlgorithm = new WeightedKing(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+            }
+
             int anchor = algorithm.calculateAnchor();
 
             for (int k = 0; k < anchor; k++) {
                 checkNodeAlgorithm.runPhaseOne();
                 checkNodeAlgorithm.runPhaseTwo();
                 checkNodeAlgorithm.runLeaderPhase(k);
+                checkNodeAlgorithm.runFaultyNodePhase(k);
             }
-                algorithm.faultySet[j] = checkNodeAlgorithm.V;
+
+            algorithm.faultySet[j] = checkNodeAlgorithm.V;
         }
     }
 
     public void updateWeights(){
         //TODO: Update weights based on algorithm.faultySet
+        WeightUpdate.flat(algorithm.faultySet, algorithm.weights);
+
+        MsgHandler.debug("Updated weights for node " + nodeIndex);
+        MsgHandler.debug("New weights: " + algorithm.weights);
+        MsgHandler.debug("Based on faults: " + Arrays.toString(algorithm.faultySet));
     }
 
 
@@ -140,12 +154,17 @@ public class Node extends Server{
             algorithm.runPhaseOne();
             algorithm.runPhaseTwo();
             algorithm.runLeaderPhase(k);
+            algorithm.runFaultyNodePhase(k);
+
+            MsgHandler.debug("Node " + nodeIndex  + " has this faultySet in round " + k + ": " + Arrays.toString(algorithm.faultySet));
         }
+
+        msg.sendMsg(MessageType.FinalValue, algorithm.V.toString(), -1, false);
+
         checkForFaultyNodes();
         updateWeights(); //TODO: Update the weights based on algorithm.faultySet
         weights = algorithm.weights;
 
-        msg.sendMsg(MessageType.FinalValue, algorithm.V.toString(), -1, false);
         return response;
     }
 

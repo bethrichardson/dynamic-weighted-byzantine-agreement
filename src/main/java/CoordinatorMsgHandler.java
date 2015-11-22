@@ -30,7 +30,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
         Value currentResponse;
         for (int i = 0; i < responses.size(); i++){
             currentResponse = Value.valueOf(responses.get(i));
-            MsgHandler.debug("Received from node " + Integer.toString(i) + ": " + currentResponse);
+            MsgHandler.debug("Received from node " + i + ": " + currentResponse);
             if (currentResponse == Value.TRUE) s0++;
             if (currentResponse == Value.FALSE) s1++;
         }
