@@ -96,17 +96,18 @@ public class Node extends Server{
         return reply;
     }
 
-    public void checkForFaultyNodes(){
+    public void checkForFaultyNodes(ConsensusAlgorithm currentAlgorithm){
+        System.out.println("CHECKING FOR FAULTY NODES");
         ConsensusAlgorithm checkNodeAlgorithm;
 
-        algorithm.gatherFaultyNodes();
+        currentAlgorithm.gatherFaultyNodes();
 
         for (int j = 0; j < algorithm.faultySet.length; j++){
             if (queenAlgorithm){
-                checkNodeAlgorithm = new WeightedQueen(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+                checkNodeAlgorithm = new WeightedQueen(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights, actFaulty);
             }
             else {
-                checkNodeAlgorithm = new WeightedKing(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
+                checkNodeAlgorithm = new WeightedKing(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights, actFaulty);
             }
 
             int anchor = algorithm.calculateAnchor();
@@ -118,12 +119,10 @@ public class Node extends Server{
                 checkNodeAlgorithm.runFaultyNodePhase(k);
             }
 
-            algorithm.faultySet[j] = checkNodeAlgorithm.V;
         }
     }
 
     public void updateWeights(){
-        //TODO: Update weights based on algorithm.faultySet
         WeightUpdate.flat(algorithm.faultySet, algorithm.weights);
 
         MsgHandler.debug("Updated weights for node " + nodeIndex);
@@ -142,11 +141,12 @@ public class Node extends Server{
         Value initialResponse = calculateResponse(network);
 
         if (queenAlgorithm){
-            algorithm = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights);
+            algorithm = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights, actFaulty);
         }
         else {
-            algorithm = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights);
+            algorithm = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights, actFaulty);
         }
+        System.out.println("RUNNING ALGORITHM");
 
         ArrayList<String> response = new ArrayList<>();
         int anchor = algorithm.calculateAnchor();
@@ -161,9 +161,10 @@ public class Node extends Server{
 
         msg.sendMsg(MessageType.FinalValue, algorithm.V.toString(), -1, false);
 
-        checkForFaultyNodes();
-        updateWeights(); //TODO: Update the weights based on algorithm.faultySet
+        checkForFaultyNodes(algorithm);
+        updateWeights();
         weights = algorithm.weights;
+        System.out.println("DONE RUNNING ALGORITHM");
 
         return response;
     }

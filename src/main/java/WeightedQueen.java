@@ -5,14 +5,15 @@ import java.util.List;
  */
 public class WeightedQueen extends ConsensusAlgorithm {
 
-    public WeightedQueen(int i, int n, Value V, MsgHandler msg, List<Double> weights) {
-        super(i, n, V, msg, weights, (3 * n)/4);
+    public WeightedQueen(int i, int n, Value V, MsgHandler msg, List<Double> weights, Boolean actFaulty) {
+        super(i, n, V, msg, weights, (3 * n)/4, actFaulty);
         rho = 1.0/4;
     }
 
 
     @Override
      public void runPhaseOne(){
+        waitForValues(); // wait for all nodes to come online before sending values
         double s0 = 0.0, s1 = 0.0;
 
         // Phase One
@@ -20,6 +21,7 @@ public class WeightedQueen extends ConsensusAlgorithm {
             broadcastValue(V);
             values[i] = V;
         }
+
 
         waitForValues();
 
@@ -61,6 +63,7 @@ public class WeightedQueen extends ConsensusAlgorithm {
             }
         }
     }
+
 
     @Override
     public void runFaultyNodePhase(int round) {
