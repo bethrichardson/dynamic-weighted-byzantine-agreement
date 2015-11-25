@@ -57,7 +57,6 @@ public class Node extends Server{
         knownNetworks.add("10.0.12.1/24");
         knownNetworks.add("10.0.0.1/8");
         knownNetworks.add("10.0.0.7/8");
-        knownNetworks.add("banana");
     }
 
 
