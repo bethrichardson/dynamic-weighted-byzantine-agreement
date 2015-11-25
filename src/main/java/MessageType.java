@@ -6,5 +6,6 @@ public enum MessageType {
     FAULTY_NODE,
     FAULTY_SET,
     FINAL_VALUE,
-    CLIENT_REQUEST
+    CLIENT_REQUEST,
+    LEADER_VALUE
 }

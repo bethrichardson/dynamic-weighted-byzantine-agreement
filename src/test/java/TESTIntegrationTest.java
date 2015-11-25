@@ -6,6 +6,7 @@ import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -100,7 +101,6 @@ public class TESTIntegrationTest {
         assertEquals(expectedResponse, response);
     }
 
-    @Ignore("Intermittent failures")
     @Test
     public void testFaultyNodeIsDetected() throws Exception {
         String name = "banana";
@@ -117,7 +117,6 @@ public class TESTIntegrationTest {
         }
     }
 
-    @Ignore("Depends on testFaultyNodeIsDetected working correctly")
     @Test
     public void testUpdateWeights() throws Exception {
         String name = "banana";
@@ -240,10 +239,8 @@ public class TESTIntegrationTest {
 
         nodeList.get(0).node.consensusAlgorithm.broadcast(Value.TRUE);
 
-        int delay = 10; //milliseconds
-        Utils.timedWait(delay, "TEST: Wait on message to nodes.");
-
         for(int i = 1; i < numNodes; i ++) {
+            assertTrue(nodeList.get(i).node.consensusAlgorithm.valuesSemaphore.tryAcquire(Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS));
             assertEquals(Value.TRUE, nodeList.get(i).node.consensusAlgorithm.values[0]);
         }
     }

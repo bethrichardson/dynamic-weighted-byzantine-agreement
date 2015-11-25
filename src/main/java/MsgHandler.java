@@ -44,7 +44,7 @@ public class MsgHandler {
 
     public static void debug(String log){
         if (Utils.debugger){
-            System.out.println("DEBUG: " + log);
+            System.out.println((System.currentTimeMillis() & 0xFFFFFFl) +": DEBUG: " + log);
         }
     }
 
@@ -82,7 +82,7 @@ public class MsgHandler {
                 System.out.println(e.getLocalizedMessage());
             }
         }
-            return response;
+        return response;
     }
 
     /**
@@ -94,33 +94,29 @@ public class MsgHandler {
      * @return the response from the node
      * @throws IOException
      */
-    public String makeServerRequest(InetSocketAddress server, String request, boolean expectResponse) throws IOException {
-        Socket socket;
-        Scanner din;
-        PrintStream pout;
+    public String makeServerRequest(InetSocketAddress server, String request, boolean expectResponse)
+            throws IOException {
         String retValue = null;
 
-        try {
-            socket = new Socket();
-            socket.connect(server, Constants.CONNECTION_TIMEOUT);
+        try (Socket socket = new Socket()) {
             socket.setReuseAddress(true);
+            socket.connect(server, Constants.CONNECTION_TIMEOUT);
+
+            try (Scanner din = new Scanner(socket.getInputStream());
+                 PrintStream pout = new PrintStream(socket.getOutputStream())) {
+                pout.println(request);
+                pout.flush();
+
+                retValue = din.nextLine();
+            }
+
+            return retValue;
         } catch (SocketTimeoutException | ConnectException e) {
+            e.printStackTrace();
             return null;
         }
-            din = new Scanner(socket.getInputStream());
-
-            pout = new PrintStream(socket.getOutputStream());
-            pout.println(request);
-            pout.flush();
-
-            if (expectResponse) retValue = din.nextLine();
-
-            socket.close();
-
-            pout.close();
-
-        return retValue;
     }
+
     public ArrayList<String> interpretMessage(String request){
         ArrayList<String> response = new ArrayList<>();
         try {

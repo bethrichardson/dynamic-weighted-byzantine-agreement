@@ -79,11 +79,11 @@ public class WeightedKing extends ConsensusAlgorithm {
     @Override
     public void runLeaderPhase(int k) {
         if (k == i) {
-            broadcast(V);
+            broadcastLeaderValue(V);
         } else {
             waitForValues();
 
-            leaderValue = receiveLeaderValue(k);
+            leaderValue = receiveLeaderValue();
 
             if (V == Value.UNDECIDED || myWeight < (2.0/3.0)) {
                 if (leaderValue == Value.UNDECIDED) {

@@ -156,7 +156,7 @@ public class Node extends Server{
             consensusAlgorithm.runFaultyNodePhase(k);
         }
 
-        checkForFaultyNodes();
+//        checkForFaultyNodes();
         updateWeights();
 
         if (!actFaulty) {

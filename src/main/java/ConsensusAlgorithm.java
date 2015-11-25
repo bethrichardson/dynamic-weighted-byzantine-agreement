@@ -1,34 +1,38 @@
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-/**
- * Created by neelshah on 10/31/15.
- */
 public class ConsensusAlgorithm {
 
     // Process id
-    public int i;
+    public final int i;
 
-    //number of nodes
-    public int N;
+    // number of nodes
+    public final int N;
 
     public double rho;
 
     // Weights
     public List<Double> weights;
- 
+
     // Proposed value
     public Value V;
 
+    final Semaphore valuesSemaphore;
+
+    final Semaphore leaderSemaphore;
+
     // Received values
-    public Value[] values;
+    final Value[] values;
 
     // Value.TRUE for all nodes recognized as faulty
-    public Value[] faultySet;
+    final Value[] faultySet;
 
     // 0.0 for all nodes and raises if suspected faulty
-    public Double[] suspectWeight;
+    final Double[] suspectWeight;
 
     // My weight
     public double myWeight;
@@ -47,17 +51,19 @@ public class ConsensusAlgorithm {
         this.i = i;
         this.N = n;
         this.V = V;
+        this.valuesSemaphore = new Semaphore(0);
+        this.leaderSemaphore = new Semaphore(0);
         this.values = new Value[N];
         this.weights = weights;
         this.faultySet = new Value[N];
-        for (int j = 0; j < N; j++) setNodeFaultyState(j, Value.FALSE);
+        Arrays.fill(faultySet, Value.FALSE);
 
         this.msg = msg;
         this.valueType = valueType;
         this.actFaulty = actFaulty;
 
         this.suspectWeight = new Double[N];
-        for (int j = 0; j < N; j++) suspectWeight[j] = 0.0;
+        Arrays.fill(suspectWeight, 0.0);
     }
 
     public void setNodeSuspectWeight(int j, Double weight){
@@ -70,7 +76,10 @@ public class ConsensusAlgorithm {
     }
 
     public void resetValues() {
-        values = new Value[N];
+        Arrays.fill(values, null);
+        leaderValue = null;
+        valuesSemaphore.drainPermits();
+        leaderSemaphore.drainPermits();
     }
 
 
@@ -78,7 +87,7 @@ public class ConsensusAlgorithm {
     public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
         if (faultySet[j].equals(Value.TRUE)) {
             return Value.TRUE;
-        } else if (myWeight > 3/4 && receivedValue != V && round == j){
+        } else if (myWeight > 0.75 && receivedValue != V && round == j){
             MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
             return Value.TRUE;
         }
@@ -131,30 +140,30 @@ public class ConsensusAlgorithm {
         waitForValues();
 
         for (int j = 0; j < weights.size(); j++) {
-            if (suspectWeight[j] >= 1.0/4) {
+            if (suspectWeight[j] >= 0.25) {
                 setNodeFaultyState(j, Value.TRUE);
             }
         }
     }
 
     public int calculateAnchor() {
-    	double p = rho;
-    	double sum = 0;
-    	int anchor = 0;
+        double p = rho;
+        double sum = 0;
+        int anchor = 0;
 
-    	// sorting array in ascending order
-    	Collections.sort(weights);
-    	// reverse array so highest weights are at lower index
-    	Collections.reverse(weights);
+        // sorting array in ascending order
+        Collections.sort(weights);
+        // reverse array so highest weights are at lower index
+        Collections.reverse(weights);
 
-    	for(int f = 0; f < weights.size(); f++) {
-    		sum = sum + weights.get(f);
+        for(int f = 0; f < weights.size(); f++) {
+            sum = sum + weights.get(f);
 
-    		if(sum > p){
-    			anchor = f + 1;
-    			break;
-    		}
-    	}
+            if(sum > p){
+                anchor = f + 1;
+                break;
+            }
+        }
 
         return anchor;
     }
@@ -175,37 +184,57 @@ public class ConsensusAlgorithm {
         }
     }
 
-    public Value receiveLeaderValue(int currentRound) {
-        return values[currentRound];
-    }
-
-    public int countNullValues(){
-        int counter = 0;
-
-        for (Value value : this.values) {
-            if (value == null) {
-                counter++;
-            }
+    public void broadcastLeaderValue(Value V) {
+        if (!actFaulty) {
+            msg.broadcastMsg(MessageType.LEADER_VALUE, V.toString(), false);
+            setLeaderValue(i, V);
+        } else {
+            msg.broadcastMsg(MessageType.LEADER_VALUE, Value.UNDECIDED.toString(), false);
+            setLeaderValue(i, Value.UNDECIDED);
         }
-
-        return counter;
     }
 
-    public synchronized void waitForValues(){
-        long deadline = System.currentTimeMillis() + Constants.VALUE_TIMEOUT;
+    public Value receiveLeaderValue() {
+        return leaderValue;
+    }
 
+    public final boolean waitForValues() {
         try {
-            wait(Constants.VALUE_TIMEOUT);
+            if(!valuesSemaphore.tryAcquire(N - 1, Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                throw new RuntimeException(new TimeoutException());
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    public final void waitForLeaderValue() {
+        try {
+            if(!leaderSemaphore.tryAcquire(1, Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                throw new RuntimeException(new TimeoutException());
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public synchronized void setNodeValue(int nodeId, Value nodeValue){
-        values[nodeId] = nodeValue;
-
-        if (countNullValues() == 0) {
-            notify();
+    public final void setNodeValue(int nodeId, Value nodeValue) {
+        if (values[nodeId] != null) {
+            throw new IllegalStateException("Attempting to overwrite value " + values[nodeId] + " with value "
+                    + nodeValue + " on node " + nodeId);
         }
+        values[nodeId] = nodeValue;
+        valuesSemaphore.release();
+    }
+
+    public final void setLeaderValue(int nodeId, Value nodeValue) {
+        if (leaderValue != null) {
+            throw new IllegalStateException("Attempting to overwrite leader value " + values[nodeId] + " with value "
+                    + nodeValue + " on node " + nodeId);
+        }
+        leaderValue = nodeValue;
+        leaderSemaphore.release();
     }
 }

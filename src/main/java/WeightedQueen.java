@@ -1,9 +1,7 @@
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Created by neelshah on 10/31/15.
- */
+
 public class WeightedQueen extends ConsensusAlgorithm {
 
     public WeightedQueen(int i, int n, Value V, MsgHandler msg, MessageType valueType, List<Double> weights, boolean actFaulty) {
@@ -41,21 +39,17 @@ public class WeightedQueen extends ConsensusAlgorithm {
             myWeight = s0;
         }
 
-        if(countNullValues() > 0) {
-            MsgHandler.debug("Node " + i  + " has null values " + Arrays.toString(values));
-        }
-
     }
 
     @Override
     public void runLeaderPhase(int q) {
         // Phase Two
         if (q == i) {
-            broadcast(V);
+            broadcastLeaderValue(V);
         } else {
-            waitForValues();
+            waitForLeaderValue();
 
-            leaderValue = receiveLeaderValue(q);
+            leaderValue = receiveLeaderValue();
 
             if (myWeight <= 0.75) {
                 V = leaderValue;
