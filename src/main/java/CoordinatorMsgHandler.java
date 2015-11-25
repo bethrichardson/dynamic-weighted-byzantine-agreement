@@ -17,7 +17,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
     }
 
     @Override
-    public synchronized void handleControlMessage(int src, MessageType messageType, String request) {
+    public synchronized ArrayList<String> handleControlMessage(int src, MessageType messageType, String request) {
         if (messageType == MessageType.IS_FAULTY) {
             coordinator.createFaultyNodes(Integer.parseInt(request));
         }
@@ -28,7 +28,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
 
             for (String s : responses) {
                 if(s == null) {
-                    return;
+                    return new ArrayList<>();
                 }
             }
 
@@ -36,6 +36,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
 
             notify();
         }
+        return new ArrayList<>();
     }
 
     // TODO Won't this be different for the two algos?
@@ -52,6 +53,21 @@ public class CoordinatorMsgHandler extends MsgHandler {
         if (s0 >= 3.0/4) return Value.TRUE;
         if (s1 >= 3.0/4) return Value.FALSE;
         else return Value.UNDECIDED;
+    }
+
+    @Override
+    public ArrayList<String> broadcastMsg(MessageType messageType, String request, Boolean expectResponse) {
+        ArrayList<String> responses = new ArrayList<>();
+        MsgHandler.debug("Broadcasting from Node " + nodeIndex + ": " + messageType.toString()  + ":" + request);
+
+        for (int i = 0; i < numServers; i++) {
+            if (i != nodeIndex) {
+                SendMessageThread sendThread = new SendMessageThread(this, i, super.coordinator, messageType, request, expectResponse);
+
+                sendThread.start();
+            }
+        }
+        return responses;
     }
 
     @Override

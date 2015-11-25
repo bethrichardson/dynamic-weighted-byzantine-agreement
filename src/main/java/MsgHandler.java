@@ -37,6 +37,11 @@ public class MsgHandler {
                 SendMessageThread sendThread = new SendMessageThread(msgHandler, i, coordinator, messageType, request, expectResponse);
 
                 sendThread.start();
+                try {
+                    sendThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
         return responses;
@@ -107,7 +112,8 @@ public class MsgHandler {
                 pout.println(request);
                 pout.flush();
 
-                retValue = din.nextLine();
+                if (expectResponse)
+                    retValue = din.nextLine();
             }
 
             return retValue;
@@ -137,7 +143,10 @@ public class MsgHandler {
         return response;
     }
 
-    public void handleControlMessage(int src, MessageType messageType, String request) {}
+    public ArrayList<String> handleControlMessage(int src, MessageType messageType, String request) {
+        ArrayList<String> response = new ArrayList<>();
+        return response;
+    }
 
     public ArrayList<String> actOnMsg(String request){
         ArrayList<String> response = new ArrayList<>();
