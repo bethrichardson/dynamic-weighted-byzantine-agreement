@@ -26,14 +26,6 @@ public class Utils {
         return resultList;
     }
 
-    public synchronized static void myWait(Object obj, String myMessage) {
-        MsgHandler.debug("waiting: " + myMessage);
-        try {
-            obj.wait(10);
-        } catch (InterruptedException e) {
-        }
-    }
-
     public static void timedWait(int delay, String message){
         MsgHandler.debug(message);
 
@@ -73,7 +65,6 @@ public class Utils {
         return weights;
     }
 
-
     public static ArrayList<ServerThread> setupNewTestNodePool(int numNodes, InetSocketAddress coordinator){
         int startPort = 9000;
         ArrayList<ServerThread>nodeThreadList = new ArrayList<>();
@@ -88,10 +79,6 @@ public class Utils {
             }
         }
         return nodeThreadList;
-    }
-
-    public static Boolean isEven(int i){
-        return (i & 1) == 0;
     }
 
     public static JsonObject jsonFromString(String jsonObjectStr) {

@@ -26,8 +26,6 @@ public class ResponseThread extends Thread {
      */
     public void run() {
         try {
-//            MsgHandler.debug("Starting execution for thread " + Integer.toString(threadNumber) + " on node " +
-//                    "" + Integer.toString(msg.nodeIndex));
             Scanner sc = new Scanner(theClient.getInputStream());
             PrintWriter pout = new PrintWriter(theClient.getOutputStream());
             String command = sc.nextLine();
@@ -39,13 +37,9 @@ public class ResponseThread extends Thread {
             }
 
             theClient.close();
-//            MsgHandler.debug("Completing execution for thread " + Integer.toString(threadNumber) + " on node " +
-//                    "" + Integer.toString(msg.nodeIndex));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
 }
-
-

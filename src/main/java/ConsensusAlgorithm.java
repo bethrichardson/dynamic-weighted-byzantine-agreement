@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,9 +30,6 @@ public class ConsensusAlgorithm {
     // 0.0 for all nodes and raises if suspected faulty
     public Double[] suspectWeight;
 
-    // My value
-    public Value myValue;
-
     // My weight
     public double myWeight;
 
@@ -41,17 +39,23 @@ public class ConsensusAlgorithm {
     //Message Handler for broadcasting control messages
     public MsgHandler msg;
 
-    public int numNodesToWaitFor;
+    public MessageType valueType;
 
-    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, List<Double> weights, int numNodesToWaitFor) {
+    public boolean actFaulty;
+
+    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, MessageType valueType, List<Double> weights, boolean actFaulty) {
         this.i = i;
         this.N = n;
         this.V = V;
         this.values = new Value[N];
         this.weights = weights;
         this.faultySet = new Value[N];
+        for (int j = 0; j < N; j++) setNodeFaultyState(j, Value.FALSE);
+
         this.msg = msg;
-        this.numNodesToWaitFor = numNodesToWaitFor;
+        this.valueType = valueType;
+        this.actFaulty = actFaulty;
+
         this.suspectWeight = new Double[N];
         for (int j = 0; j < N; j++) suspectWeight[j] = 0.0;
     }
@@ -65,17 +69,25 @@ public class ConsensusAlgorithm {
         faultySet[j] = faultyState;
     }
 
+    public void resetValues() {
+        values = new Value[N];
+    }
 
+
+    // TODO Override this for Queen and King since myWeight will be different
     public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
-        MsgHandler.debug("Node " + i + "is checking for faulty node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
-
-        if (myWeight > 3/4 && receivedValue != myValue && round == j){
+        if (faultySet[j].equals(Value.TRUE)) {
+            return Value.TRUE;
+        } else if (myWeight > 3/4 && receivedValue != V && round == j){
+            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
             return Value.TRUE;
         }
         else if (queenAlgorithm && values[j] == Value.UNDECIDED){
+            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
             return Value.TRUE;
         }
         else if (values[j] == null){
+            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
             return Value.TRUE;
         }
         else {
@@ -94,27 +106,38 @@ public class ConsensusAlgorithm {
         runFaultyNodePhase(round, false);
     }
 
-    public void broadcastFaulty(int j) {
-        msg.broadcastMsg(MessageType.FaultyNode, Integer.toString(j), false);
+    public void broadcastFaultySet() {
+        msg.broadcastMsg(MessageType.FAULTY_SET, Arrays.asList(faultySet).toString(), false);
+
+        setNodeValue(i, Value.TRUE);
     }
 
-    public void gatherFaultyNodes() {
-        for (int j = 0; j < weights.size(); j++) {
-            if (faultySet[j] == Value.TRUE) {
-                broadcastFaulty(j);
+    public void addSuspectWeights(List<String> faultySet, int reporter){
+        for (int j = 0; j < faultySet.size(); j++){
+            if (Value.valueOf(faultySet.get(j)).equals(Value.TRUE)) {
+                setNodeSuspectWeight(j, weights.get(reporter));
             }
         }
+
+        setNodeValue(reporter, Value.TRUE);
+    }
+
+    // TODO Override for Queen and King since the weight threshold will be different
+    public void gatherFaultyNodes() {
+        resetValues();
+
+        broadcastFaultySet();
 
         waitForValues();
 
         for (int j = 0; j < weights.size(); j++) {
             if (suspectWeight[j] >= 1.0/4) {
-                faultySet[j] = Value.TRUE;
+                setNodeFaultyState(j, Value.TRUE);
             }
         }
     }
 
-    public synchronized int calculateAnchor() {
+    public int calculateAnchor() {
     	double p = rho;
     	double sum = 0;
     	int anchor = 0;
@@ -142,28 +165,47 @@ public class ConsensusAlgorithm {
 
     public void runLeaderPhase(int round){}
 
-    public void broadcastValue(Value V) {
-        msg.broadcastMsg(MessageType.SetValue, V.toString(), false);
+    public void broadcast(Value V) {
+        if (!actFaulty) {
+            msg.broadcastMsg(valueType, V.toString(), false);
+            setNodeValue(i, V);
+        } else {
+            msg.broadcastMsg(valueType, Value.UNDECIDED.toString(), false);
+            setNodeValue(i, Value.UNDECIDED);
+        }
     }
 
     public Value receiveLeaderValue(int currentRound) {
         return values[currentRound];
     }
 
-    public int countNonNullValues(){
+    public int countNullValues(){
         int counter = 0;
-        for (int i = 0; i < this.values.length; i ++)
-            if (this.values[i] != null)
-                counter ++;
+
+        for (Value value : this.values) {
+            if (value == null) {
+                counter++;
+            }
+        }
+
         return counter;
     }
 
-    public void waitForValues(){
-        Utils.timedWait(100, "Node " + Integer.toString(i) + " currently has " +
-            Integer.toString(countNonNullValues()) + " non-null values." );
+    public synchronized void waitForValues(){
+        long deadline = System.currentTimeMillis() + Constants.VALUE_TIMEOUT;
+
+        try {
+            wait(Constants.VALUE_TIMEOUT);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void setNodeValue(int nodeId, Value nodeValue){
+    public synchronized void setNodeValue(int nodeId, Value nodeValue){
         values[nodeId] = nodeValue;
+
+        if (countNullValues() == 0) {
+            notify();
+        }
     }
 }

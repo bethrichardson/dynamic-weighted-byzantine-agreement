@@ -1,14 +1,12 @@
 import java.util.ArrayList;
 import java.util.Scanner;
 
-
 public class InputReader {
     Scanner sc;
 
     public InputReader() {
         sc = new Scanner(System.in);
     }
-
 
     public ArrayList<Integer> inputNodeConfig() {
         ArrayList<Integer> serverConfig = new ArrayList<>();

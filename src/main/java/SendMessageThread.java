@@ -19,11 +19,6 @@ public class SendMessageThread extends Thread {
     }
 
     public void run() {
-        MsgHandler.debug("Starting new send message thread for node " + msg.nodeIndex + ".");
-        String response = msg.sendMsg(messageType, request, receivingNode, expectResponse);
-        msg.sendMsg(messageType, response, -1, expectResponse);
+        msg.sendMsg(messageType, request, receivingNode, expectResponse);
     }
 }
-
-
-

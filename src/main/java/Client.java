@@ -67,13 +67,18 @@ public class Client {
      */
     public String getResponse(ArrayList<String> response){
         String result;
+
         if (response.get(0).equals("done")){
             result = responses.get("NoResponse");
-        }
-        else {
+        } else {
             String bid = response.get(0);
             result = responses.get(bid);
+
+            if (result == null) {
+                result = "Invalid response.";
+            }
         }
+
         return result;
     }
 
@@ -87,7 +92,7 @@ public class Client {
     public ArrayList<String> validateNetwork(String network) {
         String request = "validateNetwork," + network;
 
-        JsonObject payload = MsgHandler.buildPayload(MessageType.ClientRequest, request, -1, -2);
+        JsonObject payload = MsgHandler.buildPayload(MessageType.CLIENT_REQUEST, request, Constants.COORDINATOR_ID, Constants.CLIENT_ID);
 
         System.out.println("Attempting to validate network " + network + ".");
 
@@ -118,7 +123,7 @@ public class Client {
         while (true) {
             try {
             this.tcpserver = new Socket();
-            tcpserver.connect(server, 100);
+            tcpserver.connect(server, Constants.CONNECTION_TIMEOUT);
             din = new Scanner(tcpserver.getInputStream());
             pout = new PrintStream(tcpserver.getOutputStream());
             } catch (SocketTimeoutException | ConnectException e) {

@@ -3,23 +3,21 @@ import java.util.List;
 /**
  * Created by neelshah on 10/31/15.
  */
-
-
 public class WeightedKing extends ConsensusAlgorithm {
 
-    public WeightedKing(int i, int n, Value V, MsgHandler msg, List<Double> weights) {
-        super(i, n, V, msg, weights, (2 * n)/3);
+    public WeightedKing(int i, int n, Value V, MsgHandler msg, MessageType valueType, List<Double> weights, boolean actFaulty) {
+        super(i, n, V, msg, valueType, weights, actFaulty);
         rho = 1.0/3;
     }
 
     @Override
     public void runPhaseOne(){
         double s0 = 0.0, s1 = 0.0;
+        resetValues();
 
         // Phase One
         if (weights.get(i) > 0) {
-            broadcastValue(V);
-            values[i] = V;
+            broadcast(V);
         }
 
         waitForValues();
@@ -34,9 +32,9 @@ public class WeightedKing extends ConsensusAlgorithm {
             }
         }
 
-        if (s0 >= 0.667) {
+        if (s0 >= (2.0/3.0)) {
             V = Value.FALSE;
-        } else if (s1 >= 0.667) {
+        } else if (s1 >= (2.0/3.0)) {
             V = Value.TRUE;
         } else {
             V = Value.UNDECIDED;
@@ -46,10 +44,10 @@ public class WeightedKing extends ConsensusAlgorithm {
     @Override
     public void runPhaseTwo(){
         double s0 = 0.0, s1 = 0.0, su = 0.0;
+        resetValues();
 
         if (weights.get(i) > 0) {
-            broadcastValue(V);
-            values[i] = V;
+            broadcast(V);
         }
 
         waitForValues();
@@ -66,10 +64,10 @@ public class WeightedKing extends ConsensusAlgorithm {
             }
         }
 
-        if (s0 > 0.333) {
+        if (s0 > (1.0/3.0)) {
             V = Value.FALSE;
             myWeight = s0;
-        } else if (s1 > 0.333) {
+        } else if (s1 > (1.0/3.0)) {
             V = Value.TRUE;
             myWeight = s1;
         } else {
@@ -81,14 +79,13 @@ public class WeightedKing extends ConsensusAlgorithm {
     @Override
     public void runLeaderPhase(int k) {
         if (k == i) {
-            broadcastValue(myValue);
-            V = leaderValue = myValue;
+            broadcast(V);
         } else {
             waitForValues();
 
             leaderValue = receiveLeaderValue(k);
 
-            if (V == Value.UNDECIDED || myWeight < 0.667) {
+            if (V == Value.UNDECIDED || myWeight < (2.0/3.0)) {
                 if (leaderValue == Value.UNDECIDED) {
                     V = Value.TRUE;
                 } else {

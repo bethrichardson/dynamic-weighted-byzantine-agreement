@@ -43,12 +43,22 @@ public class TCPListenerThread extends Thread {
      * any incoming requests to backend. Pass off the socket for each new request to
      * a new ResponseThread to read the request and send response.
      */
+    // TODO Avoid infinite recursion
     public void createSocketAndThread() {
         try {
             Socket s;
             while ( (s = tcpListener.accept()) != null) {
                 numThreads++;
-                Thread t = new ResponseThread(msg, s, threadList.size() + 1);
+
+                MsgHandler msgHandler;
+
+                if (msg.nodeIndex == Constants.COORDINATOR_ID) {
+                    msgHandler = msg;
+                } else {
+                    msgHandler = new NodeMsgHandler(((NodeMsgHandler)msg).server, msg.numServers, msg.nodeIndex, msg.serverList, msg.coordinator);
+                }
+
+                Thread t = new ResponseThread(msgHandler, s, threadList.size() + 1);
                 threadList.add(t);
                 t.start();
             }
@@ -63,5 +73,3 @@ public class TCPListenerThread extends Thread {
         createSocketAndThread();
     }
 }
-
-
