@@ -14,22 +14,24 @@ public class WeightUpdate {
         normalizeWeights(weights);
     }
 
-    public static void multiplicative(Value[] faults, List<Double> weights, double epsilon) {
+    public static void additive(Value[] faults, List<Double> weights, double alpha, double beta) {
         for (int i = 0; i < faults.length; i++){
             if (faults[i].equals(Value.TRUE)) {
-                weights.set(i, weights.get(i) * (1 - epsilon));
+                weights.set(i, weights.get(i) + alpha);
+            } else if (faults[i].equals(Value.FALSE)) {
+                weights.set(i, weights.get(i) - beta);
             }
         }
 
         normalizeWeights(weights);
     }
 
-    public static void winnowed(Value[] faults, List<Double> weights, int alpha, int beta) {
+    public static void multiplicative(Value[] faults, List<Double> weights, double epsilon) {
         for (int i = 0; i < faults.length; i++){
             if (faults[i].equals(Value.TRUE)) {
-                weights.set(i, weights.get(i) / alpha);
+                weights.set(i, weights.get(i) * (1 - epsilon));
             } else if (faults[i].equals(Value.FALSE)) {
-                weights.set(i, weights.get(i) * beta);
+                weights.set(i, weights.get(i) * (1 + epsilon));
             }
         }
 

@@ -27,13 +27,17 @@ public class MsgHandler {
         return serverList.get(serverIndex);
     }
 
-    public ArrayList<String> broadcastMsg(MessageType messagetype, String request, Boolean expectResponse) {
+    public ArrayList<String> broadcastMsg(MessageType messageType, String request, Boolean expectResponse) {
         ArrayList<String> responses = new ArrayList<>();
-        MsgHandler.debug("Broadcasting from Node " + nodeIndex + ": " + messagetype.toString()  + ":" + request);
-        for (int i = 0; i < numServers; i++) {
-            SendMessageThread sendThread = new SendMessageThread(this, i, coordinator, messagetype, request, expectResponse);
+        MsgHandler.debug("Broadcasting from Node " + nodeIndex + ": " + messageType.toString()  + ":" + request);
 
-            sendThread.start();
+        for (int i = 0; i < numServers; i++) {
+            if (i != nodeIndex) {
+                MsgHandler msgHandler = new MsgHandler(numServers, serverList, nodeIndex, coordinator);
+                SendMessageThread sendThread = new SendMessageThread(msgHandler, i, coordinator, messageType, request, expectResponse);
+
+                sendThread.start();
+            }
         }
         return responses;
     }
@@ -64,13 +68,14 @@ public class MsgHandler {
         String serverRequest;
         String response = "[]";
         if (request != null) {
-            if (serverId == -1) {
+            if (serverId == Constants.COORDINATOR_ID) {
                 server = coordinator;
             } else {
                 server = getNode(serverId);
             }
 
             serverRequest = buildPayload(messageType, request, serverId, this.nodeIndex).toString();
+
             try {
                 return makeServerRequest(server, serverRequest, expectResponse);
             } catch (IOException e) {
@@ -97,7 +102,7 @@ public class MsgHandler {
 
         try {
             socket = new Socket();
-            socket.connect(server, 100);
+            socket.connect(server, Constants.CONNECTION_TIMEOUT);
             socket.setReuseAddress(true);
         } catch (SocketTimeoutException | ConnectException e) {
             return null;
@@ -124,11 +129,7 @@ public class MsgHandler {
             MessageType messageType = MessageType.valueOf(obj.getString("MessageType"));
             String requestString = obj.getString("Request");
 
-            MsgHandler.debug("Accessing from node: " + sendingId + ", to node: " + Integer.toString(nodeIndex) +
-                    " with request: " + messageType.toString() + " " + requestString);
-
-
-            if (messageType == MessageType.ClientRequest){
+            if (messageType == MessageType.CLIENT_REQUEST){
                 response = actOnMsg(requestString);
             }
             else {

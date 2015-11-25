@@ -1,4 +1,3 @@
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
@@ -47,29 +46,32 @@ public class Coordinator extends Server{
     }
 
     public void setAlgorithm(Boolean queenAlgorithm){
-        msg.broadcastMsg(MessageType.SetAlgorithm, Boolean.toString(queenAlgorithm), false);
+        msg.broadcastMsg(MessageType.ALGORITHM, Boolean.toString(queenAlgorithm), false);
     }
 
     public void setNodeFaulty(Integer i, Boolean actFaulty){
-        msg.sendMsg(MessageType.SetFaulty, Boolean.toString(actFaulty), i, false);
+        msg.sendMsg(MessageType.IS_FAULTY, Boolean.toString(actFaulty), i, false);
     }
 
     public void resetFaultyNodes(){
-        msg.broadcastMsg(MessageType.SetFaulty, Boolean.toString(false), false);
+        msg.broadcastMsg(MessageType.IS_FAULTY, Boolean.toString(false), false);
     }
 
+    // TODO Ensure faulty node weights do not go over rho
     public ArrayList<Integer> selectFaultyNodes(int numFaultyNodes){
         ArrayList<Integer> faultyNodes = new ArrayList<>(numFaultyNodes);
         int badNode = -1;
         Boolean foundUniqueNode;
         for (int i = 0; i < numFaultyNodes; i++){
             foundUniqueNode = false;
+
             while(!foundUniqueNode){
                 badNode = ThreadLocalRandom.current().nextInt(0, numNodes);
                 if (!faultyNodes.contains(badNode)){
                     foundUniqueNode = true;
                 }
             }
+
             faultyNodes.add(badNode);
         }
         return faultyNodes;
@@ -77,7 +79,9 @@ public class Coordinator extends Server{
 
     public void createFaultyNodes(int numFaultyNodes){
         resetFaultyNodes();
-        Utils.timedWait(100, "Waiting for all nodes to become non-faulty.");
+
+        // TODO Won't FIFO take care of this?
+        Utils.timedWait(Constants.VALUE_TIMEOUT, "Waiting for all nodes to become non-faulty.");
 
         ArrayList<Integer> faultyNodes = selectFaultyNodes(numFaultyNodes);
 

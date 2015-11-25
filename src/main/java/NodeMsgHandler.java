@@ -7,45 +7,37 @@ import java.util.List;
  */
 public class NodeMsgHandler extends MsgHandler {
     Node server;
-    int serverIndex;
     InetSocketAddress coordinator;
 
-    public NodeMsgHandler(Node server, int numServers, int serverIndex, List<InetSocketAddress> serverList, InetSocketAddress coordinator) {
-        super(numServers, serverList, serverIndex, coordinator);
+    public NodeMsgHandler(Node server, int numServers, int nodeIndex, List<InetSocketAddress> serverList, InetSocketAddress coordinator) {
+        super(numServers, serverList, nodeIndex, coordinator);
         this.server = server;
-        this.serverIndex = serverIndex;
         this.coordinator = coordinator;
     }
 
     @Override
-    public ArrayList<String> broadcastMsg(MessageType messageType, String request, Boolean expectResponse) {
-        ArrayList<String> responses = new ArrayList<>();
-        MsgHandler.debug("Broadcasting from Node " + nodeIndex + ": " + messageType.toString()  + ":" + request);
-        for (int i = 0; i < numServers; i++) {
-            if (i != nodeIndex)
-                responses.add(sendMsg(messageType, request, i, expectResponse));
-        }
-        return responses;
-    }
-
-    @Override
     public void handleControlMessage(int src, MessageType messageType, String request) {
-        if (messageType == MessageType.SetAlgorithm) {
-            server.setAlgorithm(Boolean.parseBoolean(request));
-        }
-        if (messageType == MessageType.SetFaulty) {
+        if (messageType == MessageType.ALGORITHM) {
+            server.setConsensusAlgorithm(Boolean.parseBoolean(request));
+        } else if (messageType == MessageType.IS_FAULTY) {
             server.setFaultyBehavior(Boolean.parseBoolean(request));
-        }
-        if (messageType == MessageType.FaultyNode) {
+        } else if (messageType == MessageType.FAULTY_SET) {
+            server.consensusAlgorithm.addSuspectWeights(Utils.interpretStringAsList(request), src);
+        } else if (messageType == MessageType.FAULTY_NODE) {
             server.setNodeFaulty(Integer.parseInt(request), src);
-        }
-        if (messageType == MessageType.SetValue) {
+        } else if (messageType == MessageType.VALUE) {
             try {
-                server.algorithm.setNodeValue(src, Value.valueOf(request));
+                MsgHandler.debug("Node " + nodeIndex + " is setting the value for node " + src + " to " + request);
+                server.consensusAlgorithm.setNodeValue(src, Value.valueOf(request));
+            } catch (Exception e) {
+                MsgHandler.debug("Node " + nodeIndex + " did not receive value " + request + " from node " + src);
             }
-            catch(Exception e){
-                System.out.println(e.getMessage());
-                server.algorithm.setNodeValue(src, Value.UNDECIDED); //set bad values to Undecided
+        } else if (messageType == MessageType.FAULT_VALUE) {
+            try {
+                MsgHandler.debug("Node " + nodeIndex + " is setting the fault value for node " + src + " to " + request);
+                server.faultConsensusAlgorithm.setNodeValue(src, Value.valueOf(request));
+            } catch (Exception e) {
+                MsgHandler.debug("Node " + nodeIndex + " did not receive fault value " + request + " from node " + src);
             }
         }
     }

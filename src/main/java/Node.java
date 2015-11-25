@@ -1,4 +1,3 @@
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -8,12 +7,12 @@ import java.util.List;
 public class Node extends Server{
     public int nodeIndex;
     InetSocketAddress node;
-    ConsensusAlgorithm algorithm;
+    ConsensusAlgorithm consensusAlgorithm;
+    ConsensusAlgorithm faultConsensusAlgorithm;
     Boolean queenAlgorithm = true;
     Boolean actFaulty = false;
     Value lastReply = Value.FALSE; //Used to produce an iterating response when faulty
     List<Double> weights;
-    int round;
 
     public ArrayList<String> knownNetworks;
 
@@ -36,6 +35,14 @@ public class Node extends Server{
 
         this.node = msg.getNode(nodeIndex);
         MsgHandler.debug("Node " + nodeIndex + " configured at " + node.toString());
+
+        if (queenAlgorithm){
+            consensusAlgorithm = new WeightedQueen(nodeIndex, numNodes, null, msg, MessageType.VALUE, weights, actFaulty);
+            faultConsensusAlgorithm = new WeightedQueen(nodeIndex, numNodes, null, msg, MessageType.FAULT_VALUE, weights, actFaulty);
+        } else {
+            consensusAlgorithm = new WeightedKing(nodeIndex, numNodes, null, msg, MessageType.VALUE, weights, actFaulty);
+            faultConsensusAlgorithm = new WeightedKing(nodeIndex, numNodes, null, msg, MessageType.FAULT_VALUE, weights, actFaulty);
+        }
 
         //Set up listener thread for TCP
         try {
@@ -67,7 +74,7 @@ public class Node extends Server{
             return Value.FALSE;
     }
 
-    public void setAlgorithm(Boolean queenAlgorithm){
+    public void setConsensusAlgorithm(Boolean queenAlgorithm){
         this.queenAlgorithm = queenAlgorithm;
     }
 
@@ -76,59 +83,55 @@ public class Node extends Server{
     }
 
     public void setNodeFaulty(int j, int reporter){
-        Double weight = this.algorithm.weights.get(reporter);
-        this.algorithm.setNodeSuspectWeight(j, weight);
+        Double weight = this.consensusAlgorithm.weights.get(reporter);
+        this.consensusAlgorithm.setNodeSuspectWeight(j, weight);
     }
 
-    public Value returnBadAnswer(){
-        return Value.UNDECIDED;
+    public void returnBadAnswer(){
+        MsgHandler msgHandler = new MsgHandler(msg.numServers, msg.serverList, msg.nodeIndex, msg.coordinator);
+        SendMessageThread sendThread = new SendMessageThread(msgHandler, Constants.COORDINATOR_ID, coordinator, MessageType.FINAL_VALUE, Value.UNDECIDED.toString(), false);
+
+        sendThread.start();
+
+        lastReply = Value.UNDECIDED;
     }
 
     public Value calculateResponse(String network){
-        Value reply;
-        if (!actFaulty){
-            reply = validateNetwork(network);
-        }
-        else {
-            reply = returnBadAnswer();
-        }
-        lastReply = reply;
-        return reply;
+        return validateNetwork(network);
     }
 
     public void checkForFaultyNodes(){
-        ConsensusAlgorithm checkNodeAlgorithm;
+        MsgHandler.debug("Node " + nodeIndex + " has this faultySet before fault consensus: " + Arrays.toString(consensusAlgorithm.faultySet));
 
-        algorithm.gatherFaultyNodes();
+        consensusAlgorithm.gatherFaultyNodes();
 
-        for (int j = 0; j < algorithm.faultySet.length; j++){
-            if (queenAlgorithm){
-                checkNodeAlgorithm = new WeightedQueen(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
-            }
-            else {
-                checkNodeAlgorithm = new WeightedKing(nodeIndex, numNodes, algorithm.faultySet[j], msg, algorithm.weights);
-            }
+        faultConsensusAlgorithm.weights = weights;
 
-            int anchor = algorithm.calculateAnchor();
+        int anchor = faultConsensusAlgorithm.calculateAnchor();
+
+        for (int j = 0; j < consensusAlgorithm.faultySet.length; j++){
+            faultConsensusAlgorithm.V = consensusAlgorithm.faultySet[j];
+            faultConsensusAlgorithm.actFaulty = actFaulty;
 
             for (int k = 0; k < anchor; k++) {
-                checkNodeAlgorithm.runPhaseOne();
-                checkNodeAlgorithm.runPhaseTwo();
-                checkNodeAlgorithm.runLeaderPhase(k);
-                checkNodeAlgorithm.runFaultyNodePhase(k);
+                faultConsensusAlgorithm.runPhaseOne();
+                faultConsensusAlgorithm.runPhaseTwo();
+                faultConsensusAlgorithm.runLeaderPhase(k);
             }
 
-            algorithm.faultySet[j] = checkNodeAlgorithm.V;
+            consensusAlgorithm.setNodeFaultyState(j, faultConsensusAlgorithm.V);
+
+            MsgHandler.debug("Node " + nodeIndex  + " has this faultySet after consensus on node " + j + ": " + Arrays.toString(consensusAlgorithm.faultySet));
         }
     }
 
     public void updateWeights(){
-        //TODO: Update weights based on algorithm.faultySet
-        WeightUpdate.flat(algorithm.faultySet, algorithm.weights);
+        WeightUpdate.flat(consensusAlgorithm.faultySet, weights);
+        consensusAlgorithm.weights = weights;
 
         MsgHandler.debug("Updated weights for node " + nodeIndex);
-        MsgHandler.debug("New weights: " + algorithm.weights);
-        MsgHandler.debug("Based on faults: " + Arrays.toString(algorithm.faultySet));
+        MsgHandler.debug("New weights: " + weights);
+        MsgHandler.debug("Based on faults: " + Arrays.toString(consensusAlgorithm.faultySet));
     }
 
 
@@ -139,31 +142,33 @@ public class Node extends Server{
      * @return String response to send back to client
      */
     public ArrayList<String> accessBackend(String network){
-        Value initialResponse = calculateResponse(network);
-
-        if (queenAlgorithm){
-            algorithm = new WeightedQueen(nodeIndex, numNodes, initialResponse, msg, weights);
-        }
-        else {
-            algorithm = new WeightedKing(nodeIndex, numNodes, initialResponse, msg, weights);
-        }
-
         ArrayList<String> response = new ArrayList<>();
-        int anchor = algorithm.calculateAnchor();
+
+        consensusAlgorithm.V = calculateResponse(network);
+        consensusAlgorithm.actFaulty = actFaulty;
+
+        int anchor = consensusAlgorithm.calculateAnchor();
+
         for (int k = 0; k < anchor; k++) {
-            algorithm.runPhaseOne();
-            algorithm.runPhaseTwo();
-            algorithm.runLeaderPhase(k);
-            algorithm.runFaultyNodePhase(k);
-
-            MsgHandler.debug("Node " + nodeIndex  + " has this faultySet in round " + k + ": " + Arrays.toString(algorithm.faultySet));
+            consensusAlgorithm.runPhaseOne();
+            consensusAlgorithm.runPhaseTwo();
+            consensusAlgorithm.runLeaderPhase(k);
+            consensusAlgorithm.runFaultyNodePhase(k);
         }
-
-        msg.sendMsg(MessageType.FinalValue, algorithm.V.toString(), -1, false);
 
         checkForFaultyNodes();
-        updateWeights(); //TODO: Update the weights based on algorithm.faultySet
-        weights = algorithm.weights;
+        updateWeights();
+
+        if (!actFaulty) {
+            MsgHandler msgHandler = new MsgHandler(msg.numServers, msg.serverList, msg.nodeIndex, msg.coordinator);
+            SendMessageThread sendThread = new SendMessageThread(msgHandler, Constants.COORDINATOR_ID, coordinator, MessageType.FINAL_VALUE, consensusAlgorithm.V.toString(), false);
+
+            sendThread.start();
+
+            lastReply = consensusAlgorithm.V;
+        } else {
+            returnBadAnswer();
+        }
 
         return response;
     }
@@ -187,19 +192,17 @@ public class Node extends Server{
 
         //Set up node pool
 
-            nodeList = Utils.createServerList(startPort + 1, numNodes); //init to all nodes
-            nodeThreadList = new ArrayList<>();
-            for (int i = 0; i < numNodes; i++){
-                try {
-                    ServerThread t = new ServerThread(nodeList, i, numNodes, coordinator, weights);
-                    nodeThreadList.add(t);
-                    t.start();
+        nodeList = Utils.createServerList(startPort + 1, numNodes); //init to all nodes
+        nodeThreadList = new ArrayList<>();
+        for (int i = 0; i < numNodes; i++){
+            try {
+                ServerThread t = new ServerThread(nodeList, i, numNodes, coordinator, weights);
+                nodeThreadList.add(t);
+                t.start();
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-
-
+        }
     }
 }

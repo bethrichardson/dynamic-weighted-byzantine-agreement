@@ -20,7 +20,8 @@ public class ServerThread extends Thread {
      * Server thread functions as an independent node
      *
      */
-    public ServerThread(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator, ArrayList<Double> initialWeights) throws IOException {
+    public ServerThread(List<InetSocketAddress> serverList, int nodeIndex, int numNodes, InetSocketAddress coordinator,
+                        ArrayList<Double> initialWeights) throws IOException {
         this.nodeIndex = nodeIndex;
         this.nodeList = serverList;
         this.coordinator = coordinator;
@@ -37,5 +38,3 @@ public class ServerThread extends Thread {
         createNode();
     }
 }
-
-
