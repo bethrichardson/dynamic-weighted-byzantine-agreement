@@ -105,21 +105,22 @@ public class Node extends Server{
 
         consensusAlgorithm.gatherFaultyNodes();
 
-        faultConsensusAlgorithm.weights = weights;
+        consensusAlgorithm.weights = weights;
 
-        int anchor = faultConsensusAlgorithm.calculateAnchor();
+        int anchor = consensusAlgorithm.calculateAnchor();
 
         for (int j = 0; j < consensusAlgorithm.faultySet.length; j++){
-            faultConsensusAlgorithm.V = consensusAlgorithm.faultySet[j];
-            faultConsensusAlgorithm.actFaulty = actFaulty;
+            consensusAlgorithm.V = consensusAlgorithm.faultySet[j];
+            consensusAlgorithm.actFaulty = actFaulty;
 
             for (int k = 0; k < anchor; k++) {
-                faultConsensusAlgorithm.runPhaseOne();
-                faultConsensusAlgorithm.runPhaseTwo();
-                faultConsensusAlgorithm.runLeaderPhase(k);
+                consensusAlgorithm.runPhaseOne(k);
+                consensusAlgorithm.runPhaseTwo(k);
+                consensusAlgorithm.runLeaderPhase(k);
+                consensusAlgorithm.runFinalizeRound(k);
             }
 
-            consensusAlgorithm.setNodeFaultyState(j, faultConsensusAlgorithm.V);
+            consensusAlgorithm.setNodeFaultyState(j, consensusAlgorithm.V);
 
             MsgHandler.debug("Node " + nodeIndex  + " has this faultySet after consensus on node " + j + ": " + Arrays.toString(consensusAlgorithm.faultySet));
         }
@@ -150,22 +151,22 @@ public class Node extends Server{
         int anchor = consensusAlgorithm.calculateAnchor();
 
         for (int k = 0; k < anchor; k++) {
-            consensusAlgorithm.runPhaseOne();
-            consensusAlgorithm.runPhaseTwo();
+            consensusAlgorithm.runPhaseOne(k);
+            consensusAlgorithm.runPhaseTwo(k);
             consensusAlgorithm.runLeaderPhase(k);
             consensusAlgorithm.runFaultyNodePhase(k);
+            consensusAlgorithm.runFinalizeRound(k); //do not continue until all other nodes have completed round
         }
+        lastReply = consensusAlgorithm.V;
 
         checkForFaultyNodes();
         updateWeights();
 
         if (!actFaulty) {
             MsgHandler msgHandler = new MsgHandler(msg.numServers, msg.serverList, msg.nodeIndex, msg.coordinator);
-            SendMessageThread sendThread = new SendMessageThread(msgHandler, Constants.COORDINATOR_ID, coordinator, MessageType.FINAL_VALUE, consensusAlgorithm.V.toString(), false);
+            SendMessageThread sendThread = new SendMessageThread(msgHandler, Constants.COORDINATOR_ID, coordinator, MessageType.FINAL_VALUE, lastReply.toString(), false);
 
             sendThread.start();
-
-            lastReply = consensusAlgorithm.V;
         } else {
             returnBadAnswer();
         }

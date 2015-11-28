@@ -31,10 +31,9 @@ public class ResponseThread extends Thread {
             String command = sc.nextLine();
             String responseString = msg.interpretMessage(command).toString();
 
-            if (!responseString.equals("[]")){
-                pout.print(responseString);
-                pout.flush();
-            }
+            pout.print(responseString);
+            pout.flush();
+
 
             theClient.close();
         } catch (IOException e) {

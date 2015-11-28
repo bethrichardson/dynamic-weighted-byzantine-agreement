@@ -11,7 +11,9 @@ public class WeightedKing extends ConsensusAlgorithm {
     }
 
     @Override
-    public void runPhaseOne(){
+    public void runPhaseOne(int k){
+        readyRound(k);
+        MsgHandler.debug("Node " + i + " is entering phase one of King algorithm for round " + k + ".");
         double s0 = 0.0, s1 = 0.0;
         resetValues();
 
@@ -42,9 +44,9 @@ public class WeightedKing extends ConsensusAlgorithm {
     }
 
     @Override
-    public void runPhaseTwo(){
+    public void runPhaseTwo(int k){
+        MsgHandler.debug("Node " + i + " is entering phase two of King algorithm for round " + k + ".");
         double s0 = 0.0, s1 = 0.0, su = 0.0;
-        resetValues();
 
         if (weights.get(i) > 0) {
             broadcast(V);
@@ -78,12 +80,13 @@ public class WeightedKing extends ConsensusAlgorithm {
 
     @Override
     public void runLeaderPhase(int k) {
+        MsgHandler.debug("Node " + i + " is entering leader phase of King algorithm for round " + k + ".");
         if (k == i) {
-            broadcast(V);
+            broadcastLeaderValue(V);
         } else {
             waitForValues();
 
-            leaderValue = receiveLeaderValue(k);
+            leaderValue = receiveLeaderValue();
 
             if (V == Value.UNDECIDED || myWeight < (2.0/3.0)) {
                 if (leaderValue == Value.UNDECIDED) {

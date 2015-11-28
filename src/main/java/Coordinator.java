@@ -38,10 +38,10 @@ public class Coordinator extends Server{
         //Set up listener thread for TCP
         try {
             tcpThread = new TCPListenerThread(coordinator, msg);
+            tcpThread.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        tcpThread.start();
 
     }
 
