@@ -94,7 +94,7 @@ public class MsgHandler {
      * @return the response from the node
      * @throws IOException
      */
-    public String makeServerRequest(InetSocketAddress server, String request, boolean expectResponse) throws IOException {
+    public synchronized String makeServerRequest(InetSocketAddress server, String request, boolean expectResponse) throws IOException {
         Socket socket;
         Scanner din;
         PrintStream pout;
@@ -104,9 +104,7 @@ public class MsgHandler {
             socket = new Socket();
             socket.connect(server, Constants.CONNECTION_TIMEOUT);
             socket.setReuseAddress(true);
-        } catch (SocketTimeoutException | ConnectException e) {
-            return null;
-        }
+
             din = new Scanner(socket.getInputStream());
 
             pout = new PrintStream(socket.getOutputStream());
@@ -115,9 +113,12 @@ public class MsgHandler {
 
             if (expectResponse) retValue = din.nextLine();
 
-            socket.close();
-
             pout.close();
+            socket.close();
+        } catch (SocketTimeoutException | ConnectException e) {
+            e.printStackTrace();
+            return null;
+        }
 
         return retValue;
     }

@@ -93,5 +93,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+        MsgHandler.debug("Coordinator has values: " + Arrays.toString(responses));
     }
 }

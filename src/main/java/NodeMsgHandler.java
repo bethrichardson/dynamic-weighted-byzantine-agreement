@@ -17,28 +17,42 @@ public class NodeMsgHandler extends MsgHandler {
 
     @Override
     public void handleControlMessage(int src, MessageType messageType, String request) {
-        if (messageType == MessageType.ALGORITHM) {
-            server.setConsensusAlgorithm(Boolean.parseBoolean(request));
-        } else if (messageType == MessageType.IS_FAULTY) {
-            server.setFaultyBehavior(Boolean.parseBoolean(request));
-        } else if (messageType == MessageType.FAULTY_SET) {
-            server.consensusAlgorithm.addSuspectWeights(Utils.interpretStringAsList(request), src);
-        } else if (messageType == MessageType.FAULTY_NODE) {
-            server.setNodeFaulty(Integer.parseInt(request), src);
-        } else if (messageType == MessageType.VALUE) {
-            try {
-                MsgHandler.debug("Node " + nodeIndex + " is setting the value for node " + src + " to " + request);
-                server.consensusAlgorithm.setNodeValue(src, Value.valueOf(request));
-            } catch (Exception e) {
-                MsgHandler.debug("Node " + nodeIndex + " did not receive value " + request + " from node " + src);
-            }
-        } else if (messageType == MessageType.FAULT_VALUE) {
-            try {
-                MsgHandler.debug("Node " + nodeIndex + " is setting the fault value for node " + src + " to " + request);
-                server.faultConsensusAlgorithm.setNodeValue(src, Value.valueOf(request));
-            } catch (Exception e) {
-                MsgHandler.debug("Node " + nodeIndex + " did not receive fault value " + request + " from node " + src);
-            }
+        String[] values;
+
+        switch (messageType) {
+            case ALGORITHM:
+                server.setConsensusAlgorithm(Boolean.parseBoolean(request));
+                break;
+            case IS_FAULTY:
+                server.setFaultyBehavior(Boolean.parseBoolean(request));
+                break;
+            case FAULTY_SET:
+                server.consensusAlgorithm.addSuspectWeights(Utils.interpretStringAsList(request), src);
+                break;
+            case PHASE_ONE_VALUE:
+                values = request.split(",");
+                server.consensusAlgorithm.setPhaseOneNodeValue(src, Value.valueOf(values[0]), Integer.parseInt(values[1]));
+                break;
+            case PHASE_TWO_VALUE:
+                values = request.split(",");
+                server.consensusAlgorithm.setPhaseTwoNodeValue(src, Value.valueOf(values[0]), Integer.parseInt(values[1]));
+                break;
+            case LEADER_VALUE:
+                values = request.split(",");
+                server.consensusAlgorithm.setLeaderValue(Value.valueOf(values[0]), Integer.parseInt(values[1]));
+                break;
+            case FAULT_PHASE_ONE_VALUE:
+                values = request.split(",");
+                server.faultConsensusAlgorithms[Integer.parseInt(values[2])].setPhaseOneNodeValue(src, Value.valueOf(values[0]), Integer.parseInt(values[1]));
+                break;
+            case FAULT_PHASE_TWO_VALUE:
+                values = request.split(",");
+                server.faultConsensusAlgorithms[Integer.parseInt(values[2])].setPhaseTwoNodeValue(src, Value.valueOf(values[0]), Integer.parseInt(values[1]));
+                break;
+            case FAULT_LEADER_VALUE:
+                values = request.split(",");
+                server.faultConsensusAlgorithms[Integer.parseInt(values[2])].setLeaderValue(Value.valueOf(values[0]), Integer.parseInt(values[1]));
+                break;
         }
     }
 
