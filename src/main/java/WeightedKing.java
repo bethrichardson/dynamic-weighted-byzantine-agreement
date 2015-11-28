@@ -5,26 +5,26 @@ import java.util.List;
  */
 public class WeightedKing extends ConsensusAlgorithm {
 
-    public WeightedKing(int i, int n, Value V, MsgHandler msg, MessageType valueType, List<Double> weights, boolean actFaulty) {
-        super(i, n, V, msg, valueType, weights, actFaulty);
-        rho = 1.0/3;
+    public WeightedKing(int i, int n, Value V, MsgHandler msg, List<Double> weights, boolean actFaulty) {
+        super(i, n, V, msg, weights, actFaulty);
+        rho = 1.0/3.0;
+        calculateAnchor();
     }
 
     @Override
-    public void runPhaseOne(){
+    public void runPhaseOne(int k){
         double s0 = 0.0, s1 = 0.0;
-        resetValues();
 
         // Phase One
         if (weights.get(i) > 0) {
-            broadcast(V);
+            broadcastPhaseOneValue(V, k);
         }
 
-        waitForValues();
+        waitForPhaseOneValues(k);
 
         for (int j = 0; j < weights.size(); j++) {
             if (weights.get(j) > 0) {
-                if (values[j] == Value.TRUE) {
+                if (p1Values[j] == Value.TRUE) {
                     s1 += weights.get(j);
                 } else {
                     s0 += weights.get(j);
@@ -42,21 +42,20 @@ public class WeightedKing extends ConsensusAlgorithm {
     }
 
     @Override
-    public void runPhaseTwo(){
+    public void runPhaseTwo(int k){
         double s0 = 0.0, s1 = 0.0, su = 0.0;
-        resetValues();
 
         if (weights.get(i) > 0) {
-            broadcast(V);
+            broadcastPhaseTwoValue(V, k);
         }
 
-        waitForValues();
+        waitForPhaseTwoValues(k);
 
         for (int j = 0; j < weights.size(); j++) {
             if (weights.get(j) > 0) {
-                if (values[j] == Value.TRUE) {
+                if (p2Values[j] == Value.TRUE) {
                     s1 += weights.get(j);
-                } else if (values[j] == Value.FALSE) {
+                } else if (p2Values[j] == Value.FALSE) {
                     s0 += weights.get(j);
                 } else {
                     su += weights.get(j);
@@ -79,11 +78,9 @@ public class WeightedKing extends ConsensusAlgorithm {
     @Override
     public void runLeaderPhase(int k) {
         if (k == i) {
-            broadcast(V);
+            broadcastLeaderValue(V, k);
         } else {
-            waitForValues();
-
-            leaderValue = receiveLeaderValue(k);
+            waitForLeaderValue(k);
 
             if (V == Value.UNDECIDED || myWeight < (2.0/3.0)) {
                 if (leaderValue == Value.UNDECIDED) {

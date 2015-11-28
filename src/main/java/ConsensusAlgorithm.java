@@ -1,6 +1,11 @@
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by neelshah on 10/31/15.
@@ -21,8 +26,30 @@ public class ConsensusAlgorithm {
     // Proposed value
     public Value V;
 
+    // Anchor
+    public int anchor;
+
     // Received values
-    public Value[] values;
+    public Value[] p1Values;
+    public Value[] p2Values;
+    public Value[] faultySetsValues;
+    public Value leaderValue;
+
+    // Lock
+    Lock p1Lock = new ReentrantLock();
+    Condition[] p1ValuesArrived;
+    Condition[] p1ValuesCleared;
+
+    Lock p2Lock = new ReentrantLock();
+    Condition[] p2ValuesArrived;
+    Condition[] p2ValuesCleared;
+
+    Lock leaderLock = new ReentrantLock();
+    Condition[] leaderValueArrived;
+    Condition[] leaderValueCleared;
+
+    Lock faultySetsLock = new ReentrantLock();
+    final Condition faultySetsArrived = faultySetsLock.newCondition();
 
     // Value.TRUE for all nodes recognized as faulty
     public Value[] faultySet;
@@ -33,31 +60,33 @@ public class ConsensusAlgorithm {
     // My weight
     public double myWeight;
 
-    // Queen/King value
-    public Value leaderValue;
-
     //Message Handler for broadcasting control messages
     public MsgHandler msg;
 
-    public MessageType valueType;
-
     public boolean actFaulty;
 
-    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, MessageType valueType, List<Double> weights, boolean actFaulty) {
+    public int faultNode;
+
+    public ConsensusAlgorithm(int i, int n, Value V, MsgHandler msg, List<Double> weights, boolean actFaulty) {
         this.i = i;
         this.N = n;
         this.V = V;
-        this.values = new Value[N];
         this.weights = weights;
+
+        this.p1Values = new Value[N];
+        this.p2Values = new Value[N];
+
         this.faultySet = new Value[N];
         for (int j = 0; j < N; j++) setNodeFaultyState(j, Value.FALSE);
 
+        this.faultySetsValues = new Value[N];
+
         this.msg = msg;
-        this.valueType = valueType;
         this.actFaulty = actFaulty;
 
         this.suspectWeight = new Double[N];
         for (int j = 0; j < N; j++) suspectWeight[j] = 0.0;
+
     }
 
     public void setNodeSuspectWeight(int j, Double weight){
@@ -69,25 +98,43 @@ public class ConsensusAlgorithm {
         faultySet[j] = faultyState;
     }
 
-    public void resetValues() {
-        values = new Value[N];
+    public void resetValuesForNewRound(int round) {
+        p1Lock.lock();
+        p2Lock.lock();
+        leaderLock.lock();
+
+        try {
+            Arrays.fill(p1Values, null);
+            Arrays.fill(p2Values, null);
+            leaderValue = null;
+
+            p1ValuesCleared[round].signalAll();
+            p2ValuesCleared[round].signalAll();
+            leaderValueCleared[round].signalAll();
+            MsgHandler.debug("Node " + i + " leader value has cleared in round " + round);
+
+        } finally {
+            p1Lock.unlock();
+            p2Lock.unlock();
+            leaderLock.unlock();
+        }
+
     }
 
-
     // TODO Override this for Queen and King since myWeight will be different
-    public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
+    public Value checkForFaultyNode(int j, int round, Boolean queenAlgorithm){
         if (faultySet[j].equals(Value.TRUE)) {
             return Value.TRUE;
-        } else if (myWeight > 3/4 && receivedValue != V && round == j){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
+        } else if (myWeight > 3/4 && leaderValue != V && round == j){
+            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + leaderValue);
             return Value.TRUE;
         }
-        else if (queenAlgorithm && values[j] == Value.UNDECIDED){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
+        else if (queenAlgorithm && p1Values[j] == Value.UNDECIDED){
+            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + p1Values[j]);
             return Value.TRUE;
         }
-        else if (values[j] == null){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
+        else if (p1Values[j] == null){
+            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + p1Values[j]);
             return Value.TRUE;
         }
         else {
@@ -97,8 +144,8 @@ public class ConsensusAlgorithm {
 
     public void runFaultyNodePhase(int round, Boolean queenAlgorithm) {
         //Check for faulty nodes
-        for (int j = 0; j < values.length; j++) {
-            setNodeFaultyState(j, checkForFaultyNode(values[j], j, round, queenAlgorithm));
+        for (int j = 0; j < N; j++) {
+            setNodeFaultyState(j, checkForFaultyNode(j, round, queenAlgorithm));
         }
     }
 
@@ -109,26 +156,33 @@ public class ConsensusAlgorithm {
     public void broadcastFaultySet() {
         msg.broadcastMsg(MessageType.FAULTY_SET, Arrays.asList(faultySet).toString(), false);
 
-        setNodeValue(i, Value.TRUE);
+        addSuspectWeights(Utils.interpretStringAsList(Arrays.asList(faultySet).toString()), i);
     }
 
     public void addSuspectWeights(List<String> faultySet, int reporter){
-        for (int j = 0; j < faultySet.size(); j++){
-            if (Value.valueOf(faultySet.get(j)).equals(Value.TRUE)) {
-                setNodeSuspectWeight(j, weights.get(reporter));
+        faultySetsLock.lock();
+        try {
+            for (int j = 0; j < faultySet.size(); j++){
+                if (Value.valueOf(faultySet.get(j)).equals(Value.TRUE)) {
+                    setNodeSuspectWeight(j, weights.get(reporter));
+                }
             }
-        }
 
-        setNodeValue(reporter, Value.TRUE);
+            faultySetsValues[reporter] = Value.TRUE;
+
+            if (countNullValues(faultySetsValues) == 0) {
+                faultySetsArrived.signal();
+            }
+        } finally {
+            faultySetsLock.unlock();
+        }
     }
 
     // TODO Override for Queen and King since the weight threshold will be different
     public void gatherFaultyNodes() {
-        resetValues();
-
         broadcastFaultySet();
 
-        waitForValues();
+        waitForFaultySetsValues();
 
         for (int j = 0; j < weights.size(); j++) {
             if (suspectWeight[j] >= 1.0/4) {
@@ -140,7 +194,7 @@ public class ConsensusAlgorithm {
     public int calculateAnchor() {
     	double p = rho;
     	double sum = 0;
-    	int anchor = 0;
+    	anchor = 0;
 
     	// sorting array in ascending order
     	Collections.sort(weights);
@@ -156,33 +210,67 @@ public class ConsensusAlgorithm {
     		}
     	}
 
+        this.p1ValuesArrived = new Condition[anchor];
+        Arrays.fill(p1ValuesArrived, p1Lock.newCondition());
+
+        this.p1ValuesCleared = new Condition[anchor];
+        Arrays.fill(p1ValuesCleared, p1Lock.newCondition());
+
+        this.p2ValuesArrived = new Condition[anchor];
+        Arrays.fill(p2ValuesArrived, p2Lock.newCondition());
+
+        this.p2ValuesCleared = new Condition[anchor];
+        Arrays.fill(p2ValuesCleared, p2Lock.newCondition());
+
+        this.leaderValueArrived = new Condition[anchor];
+        Arrays.fill(leaderValueArrived, leaderLock.newCondition());
+
+        this.leaderValueCleared = new Condition[anchor];
+        Arrays.fill(leaderValueCleared, leaderLock.newCondition());
+
         return anchor;
     }
 
-    public void runPhaseOne(){}
+    public void runPhaseOne(int round){}
 
-    public void runPhaseTwo(){}
+    public void runPhaseTwo(int round){}
 
     public void runLeaderPhase(int round){}
 
-    public void broadcast(Value V) {
+    public void broadcastPhaseOneValue(Value V, int round) {
         if (!actFaulty) {
-            msg.broadcastMsg(valueType, V.toString(), false);
-            setNodeValue(i, V);
+            msg.broadcastMsg(MessageType.PHASE_ONE_VALUE, V.toString() + "," + round, false);
+            setPhaseOneNodeValue(i, V, round);
         } else {
-            msg.broadcastMsg(valueType, Value.UNDECIDED.toString(), false);
-            setNodeValue(i, Value.UNDECIDED);
+            msg.broadcastMsg(MessageType.PHASE_ONE_VALUE, Value.UNDECIDED.toString()+ "," + round, false);
+            setPhaseOneNodeValue(i, Value.UNDECIDED, round);
         }
     }
 
-    public Value receiveLeaderValue(int currentRound) {
-        return values[currentRound];
+    public void broadcastPhaseTwoValue(Value V, int round) {
+        if (!actFaulty) {
+            msg.broadcastMsg(MessageType.PHASE_TWO_VALUE, V.toString() + "," + round, false);
+            setPhaseTwoNodeValue(i, V, round);
+        } else {
+            msg.broadcastMsg(MessageType.PHASE_TWO_VALUE, Value.UNDECIDED.toString()+ "," + round, false);
+            setPhaseTwoNodeValue(i, Value.UNDECIDED, round);
+        }
     }
 
-    public int countNullValues(){
+    public void broadcastLeaderValue(Value V, int round) {
+        if (!actFaulty) {
+            msg.broadcastMsg(MessageType.LEADER_VALUE, V.toString() + "," + round, false);
+            setLeaderValue(V, round);
+        } else {
+            msg.broadcastMsg(MessageType.LEADER_VALUE, Value.UNDECIDED.toString()+ "," + round, false);
+            setLeaderValue(Value.UNDECIDED, round);
+        }
+    }
+
+    public int countNullValues(Value[] values) {
         int counter = 0;
 
-        for (Value value : this.values) {
+        for (Value value : values) {
             if (value == null) {
                 counter++;
             }
@@ -191,21 +279,116 @@ public class ConsensusAlgorithm {
         return counter;
     }
 
-    public synchronized void waitForValues(){
-        long deadline = System.currentTimeMillis() + Constants.VALUE_TIMEOUT;
-
+    public void waitForPhaseOneValues(int round){
+        p1Lock.lock();
         try {
-            wait(Constants.VALUE_TIMEOUT);
+            if (countNullValues(p1Values) > 0) {
+                p1ValuesArrived[round].await(Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } finally {
+            p1Lock.unlock();
         }
     }
 
-    public synchronized void setNodeValue(int nodeId, Value nodeValue){
-        values[nodeId] = nodeValue;
+    public void waitForPhaseTwoValues(int round){
+        p2Lock.lock();
+        try {
+            if (countNullValues(p2Values) > 0) {
+                p2ValuesArrived[round].await(Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            p2Lock.unlock();
+        }
+    }
 
-        if (countNullValues() == 0) {
-            notify();
+    public void waitForLeaderValue(int round){
+        leaderLock.lock();
+        try {
+            if (leaderValue == null) {
+                MsgHandler.debug("Node " + i + " is waiting on leader value to arrive in round " + round);
+                leaderValueArrived[round].await(Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            leaderLock.unlock();
+        }
+    }
+
+    public void waitForFaultySetsValues(){
+        faultySetsLock.lock();
+        try {
+            if (countNullValues(faultySetsValues) > 0) {
+                faultySetsArrived.await(Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            faultySetsLock.unlock();
+        }
+    }
+
+    public void setPhaseOneNodeValue(int nodeId, Value value, int round){
+        p1Lock.lock();
+        try {
+            if (p1Values[nodeId] == null) {
+                p1Values[nodeId] = value;
+
+                if (countNullValues(p1Values) == 0) {
+                    MsgHandler.debug("Node " + i + " has received phase one values in round " + round + ": " + Arrays.toString(p1Values));
+                    p1ValuesArrived[round].signal();
+                }
+            } else {
+                MsgHandler.debug("Node " + i + " is waiting on phase one values to be cleared in round " + round);
+                p1ValuesCleared[round].await();
+            }
+        } catch (InterruptedException e) {
+            MsgHandler.debug("Node " + i + " was interrupted waiting on phase one values to be cleared in round " + round);
+            e.printStackTrace();
+        } finally {
+            p1Lock.unlock();
+        }
+    }
+
+    public void setPhaseTwoNodeValue(int nodeId, Value value, int round){
+        p2Lock.lock();
+        try {
+            if (p2Values[nodeId] == null) {
+                p2Values[nodeId] = value;
+
+                if (countNullValues(p2Values) == 0) {
+                    p2ValuesArrived[round].signal();
+                }
+            } else {
+                p2ValuesCleared[round].await();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            p2Lock.unlock();
+        }
+    }
+
+    public void setLeaderValue(Value value, int round){
+        leaderLock.lock();
+        try {
+            if (leaderValue == null) {
+                leaderValue = value;
+                MsgHandler.debug("Node " + i + " has set leader value in round " + round);
+                leaderValueArrived[round].signal();
+            } else {
+                MsgHandler.debug("Node " + i + " is waiting on leader value to be cleared in round " + round);
+                leaderValueCleared[round].await();
+            }
+        } catch (InterruptedException e) {
+            MsgHandler.debug("Node " + i + " was interrupted waiting on leader value to be cleared in round " + round);
+            e.printStackTrace();
+        } finally {
+            leaderLock.unlock();
         }
     }
 }

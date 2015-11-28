@@ -43,7 +43,6 @@ public class TCPListenerThread extends Thread {
      * any incoming requests to backend. Pass off the socket for each new request to
      * a new ResponseThread to read the request and send response.
      */
-    // TODO Avoid infinite recursion
     public void createSocketAndThread() {
         try {
             Socket s;
@@ -62,8 +61,6 @@ public class TCPListenerThread extends Thread {
                 threadList.add(t);
                 t.start();
             }
-            createSocketAndThread();
-
         } catch (IOException e) {
             //DO nothing.
         }

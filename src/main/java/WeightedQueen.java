@@ -6,26 +6,26 @@ import java.util.List;
  */
 public class WeightedQueen extends ConsensusAlgorithm {
 
-    public WeightedQueen(int i, int n, Value V, MsgHandler msg, MessageType valueType, List<Double> weights, boolean actFaulty) {
-        super(i, n, V, msg, valueType, weights, actFaulty);
-        rho = 1.0/4;
+    public WeightedQueen(int i, int n, Value V, MsgHandler msg, List<Double> weights, boolean actFaulty) {
+        super(i, n, V, msg, weights, actFaulty);
+        rho = 1.0/4.0;
+        calculateAnchor();
     }
 
     @Override
-     public void runPhaseOne(){
+     public void runPhaseOne(int q){
         double s0 = 0.0, s1 = 0.0;
-        resetValues();
 
         // Phase One
         if (weights.get(i) > 0) {
-            broadcast(V);
+            broadcastPhaseOneValue(V, q);
         }
 
-        waitForValues();
+        waitForPhaseOneValues(q);
 
         for (int j = 0; j < weights.size(); j++) {
             if (weights.get(j) > 0) {
-                if (values[j] == Value.TRUE) {
+                if (p1Values[j] == Value.TRUE) {
                     s1 += weights.get(j);
                 } else {
                     s0 += weights.get(j);
@@ -40,22 +40,16 @@ public class WeightedQueen extends ConsensusAlgorithm {
             V = Value.FALSE;
             myWeight = s0;
         }
-
-        if(countNullValues() > 0) {
-            MsgHandler.debug("Node " + i  + " has null values " + Arrays.toString(values));
-        }
-
     }
 
     @Override
     public void runLeaderPhase(int q) {
         // Phase Two
         if (q == i) {
-            broadcast(V);
+            MsgHandler.debug("Node " + i + " is leader in round " + q + " and has value: " + V);
+            broadcastLeaderValue(V, q);
         } else {
-            waitForValues();
-
-            leaderValue = receiveLeaderValue(q);
+            waitForLeaderValue(q);
 
             if (myWeight <= 0.75) {
                 V = leaderValue;

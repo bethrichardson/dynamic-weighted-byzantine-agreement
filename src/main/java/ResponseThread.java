@@ -40,6 +40,5 @@ public class ResponseThread extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 }
