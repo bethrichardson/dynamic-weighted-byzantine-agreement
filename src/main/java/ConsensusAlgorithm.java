@@ -105,13 +105,10 @@ public class ConsensusAlgorithm {
     }
 
 
-
-    // TODO Override this for Queen and King since myWeight will be different
     public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
         if (faultySet[j].equals(Value.TRUE)) {
             return Value.TRUE;
-        } else if (myWeight > 0.75 && receivedValue != V && round == j){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
+        } else if (myWeight > N - rho && receivedValue != V && round == j){
             return Value.TRUE;
         }
         else if (queenAlgorithm && values[j] == Value.UNDECIDED){
@@ -238,6 +235,14 @@ public class ConsensusAlgorithm {
 
     public Value receiveLeaderValue() {
         return leaderValue;
+    }
+
+    public void setValue(Value value){
+        V = value;
+    }
+
+    public Value getValue(){
+        return V;
     }
 
     public final boolean waitForValues() {

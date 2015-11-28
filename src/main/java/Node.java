@@ -145,10 +145,11 @@ public class Node extends Server{
     public ArrayList<String> accessBackend(String network){
         ArrayList<String> response = new ArrayList<>();
 
-        consensusAlgorithm.V = calculateResponse(network);
+
         consensusAlgorithm.actFaulty = actFaulty;
 
         int anchor = consensusAlgorithm.calculateAnchor();
+        consensusAlgorithm.setValue(calculateResponse(network));
 
         for (int k = 0; k < anchor; k++) {
             consensusAlgorithm.runPhaseOne(k);
@@ -157,7 +158,7 @@ public class Node extends Server{
             consensusAlgorithm.runFaultyNodePhase(k);
             consensusAlgorithm.runFinalizeRound(k); //do not continue until all other nodes have completed round
         }
-        lastReply = consensusAlgorithm.V;
+        lastReply = consensusAlgorithm.getValue();
 
         checkForFaultyNodes();
         updateWeights();
