@@ -82,7 +82,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
         if (response != Value.UNDECIDED) {
             responseToClient.add(response.toString());
         } else if (!coordinator.failed){
-            MsgHandler.debug("Switching to Weighted King due to Weighted Queen failure");
+            MsgHandler.debug("COORDINATOR: Switching to Weighted King due to Weighted Queen failure");
 
             coordinator.setAlgorithm(false);
             coordinator.failed = true;
@@ -96,7 +96,9 @@ public class CoordinatorMsgHandler extends MsgHandler {
             if (response != Value.UNDECIDED) {
                 responseToClient.add(response.toString());
             } else {
-                throw new RuntimeException("Consensus Algorithm failed after failing over to Weighted King Algorithm.");
+                responseToClient.add(response.toString());
+                Exception rte = new RuntimeException("Consensus Algorithm failed after failing over to Weighted King Algorithm.");
+                System.out.println(rte.getMessage());
             }
         }
 

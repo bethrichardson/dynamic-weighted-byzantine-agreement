@@ -29,7 +29,7 @@ public class Client {
         this.serverList = serverList;
         this.serverIndex = 0;
         this.server = this.serverList.get(serverIndex);
-        System.out.println("Client node initialized to " + this.server.toString());
+        MsgHandler.debug("Client node initialized to " + this.server.toString());
         initializeResponseSet();
     }
 
@@ -94,7 +94,7 @@ public class Client {
 
         JsonObject payload = MsgHandler.buildPayload(MessageType.CLIENT_REQUEST, request, Constants.COORDINATOR_ID, Constants.CLIENT_ID);
 
-        System.out.println("Attempting to validate network " + network + ".");
+        MsgHandler.debug("Attempting to validate network " + network + ".");
 
         return sendRequest(payload);
     }

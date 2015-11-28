@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Utils {
-    public static Boolean debugger = true;
+    public static Boolean debugger = false;
 
     /**
      * Read in a CSV string and convert to ArrayList of Strings.
