@@ -46,7 +46,12 @@ public class Coordinator extends Server{
     }
 
     public void setAlgorithm(Boolean queenAlgorithm){
-        msg.broadcastMsg(MessageType.ALGORITHM, Boolean.toString(queenAlgorithm), false);
+        msg.broadcastMsg(MessageType.ALGORITHM, Boolean.toString(queenAlgorithm), true);
+//        try {
+//            Thread.sleep(1000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
     }
 
     public void setNodeFaulty(Integer i, Boolean actFaulty){

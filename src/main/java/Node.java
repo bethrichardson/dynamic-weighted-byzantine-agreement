@@ -36,13 +36,7 @@ public class Node extends Server{
         this.node = msg.getNode(nodeIndex);
         MsgHandler.debug("Node " + nodeIndex + " configured at " + node.toString());
 
-        if (queenAlgorithm){
-            consensusAlgorithm = new WeightedQueen(nodeIndex, numNodes, null, msg, MessageType.VALUE, weights, actFaulty);
-            faultConsensusAlgorithm = new WeightedQueen(nodeIndex, numNodes, null, msg, MessageType.FAULT_VALUE, weights, actFaulty);
-        } else {
-            consensusAlgorithm = new WeightedKing(nodeIndex, numNodes, null, msg, MessageType.VALUE, weights, actFaulty);
-            faultConsensusAlgorithm = new WeightedKing(nodeIndex, numNodes, null, msg, MessageType.FAULT_VALUE, weights, actFaulty);
-        }
+        initAlgorithms();
 
         //Set up listener thread for TCP
         try {
@@ -57,6 +51,16 @@ public class Node extends Server{
         knownNetworks.add("10.0.12.1/24");
         knownNetworks.add("10.0.0.1/8");
         knownNetworks.add("10.0.0.7/8");
+    }
+
+    private void initAlgorithms(){
+        if (queenAlgorithm){
+            consensusAlgorithm = new WeightedQueen(nodeIndex, numNodes, null, msg, MessageType.VALUE, weights, actFaulty);
+            faultConsensusAlgorithm = new WeightedQueen(nodeIndex, numNodes, null, msg, MessageType.FAULT_VALUE, weights, actFaulty);
+        } else {
+            consensusAlgorithm = new WeightedKing(nodeIndex, numNodes, null, msg, MessageType.VALUE, weights, actFaulty);
+            faultConsensusAlgorithm = new WeightedKing(nodeIndex, numNodes, null, msg, MessageType.FAULT_VALUE, weights, actFaulty);
+        }
     }
 
 
@@ -76,6 +80,7 @@ public class Node extends Server{
 
     public void setConsensusAlgorithm(Boolean queenAlgorithm){
         this.queenAlgorithm = queenAlgorithm;
+        initAlgorithms();
     }
 
     public void setFaultyBehavior(Boolean actFaulty){
@@ -145,10 +150,11 @@ public class Node extends Server{
     public ArrayList<String> accessBackend(String network){
         ArrayList<String> response = new ArrayList<>();
 
-        consensusAlgorithm.V = calculateResponse(network);
+
         consensusAlgorithm.actFaulty = actFaulty;
 
         int anchor = consensusAlgorithm.calculateAnchor();
+        consensusAlgorithm.setValue(calculateResponse(network));
 
         for (int k = 0; k < anchor; k++) {
             consensusAlgorithm.runPhaseOne(k);
@@ -157,7 +163,7 @@ public class Node extends Server{
             consensusAlgorithm.runFaultyNodePhase(k);
             consensusAlgorithm.runFinalizeRound(k); //do not continue until all other nodes have completed round
         }
-        lastReply = consensusAlgorithm.V;
+        lastReply = consensusAlgorithm.getValue();
 
         checkForFaultyNodes();
         updateWeights();

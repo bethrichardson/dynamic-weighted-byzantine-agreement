@@ -105,21 +105,16 @@ public class ConsensusAlgorithm {
     }
 
 
-
-    // TODO Override this for Queen and King since myWeight will be different
     public Value checkForFaultyNode(Value receivedValue, int j, int round, Boolean queenAlgorithm){
         if (faultySet[j].equals(Value.TRUE)) {
             return Value.TRUE;
-        } else if (myWeight > 0.75 && receivedValue != V && round == j){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
+        } else if (myWeight > N - rho && receivedValue != V && round == j){
             return Value.TRUE;
         }
         else if (queenAlgorithm && values[j] == Value.UNDECIDED){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
             return Value.TRUE;
         }
         else if (values[j] == null){
-            MsgHandler.debug("Node " + i + " accuses node " + j + " in round " + round + " with myWeight " + myWeight + " and received value " + receivedValue);
             return Value.TRUE;
         }
         else {
@@ -163,7 +158,7 @@ public class ConsensusAlgorithm {
         waitForValues();
 
         for (int j = 0; j < weights.size(); j++) {
-            if (suspectWeight[j] >= 0.25) {
+            if (suspectWeight[j] >= rho) {
                 setNodeFaultyState(j, Value.TRUE);
             }
         }
@@ -242,6 +237,14 @@ public class ConsensusAlgorithm {
         return leaderValue;
     }
 
+    public void setValue(Value value){
+        V = value;
+    }
+
+    public Value getValue(){
+        return V;
+    }
+
     public final boolean waitForValues() {
         try {
             if(!valuesSemaphore.tryAcquire(3 * N/4, Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -250,7 +253,7 @@ public class ConsensusAlgorithm {
                         MsgHandler.debug("Node " + i + " is missing value for node " + j);
                     }
                 }
-                throw new RuntimeException(new TimeoutException("Value timeout on node " + i));
+//                throw new RuntimeException(new TimeoutException("Value timeout on node " + i));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -262,7 +265,7 @@ public class ConsensusAlgorithm {
     public final boolean waitForAcks() {
         try {
             if(!finishReadySemaphore.tryAcquire(N - 1, Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new RuntimeException(new TimeoutException("Ready for finish round timeout on node " + i));
+//                throw new RuntimeException(new TimeoutException("Ready for finish round timeout on node " + i));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -274,7 +277,7 @@ public class ConsensusAlgorithm {
     public final boolean waitForStartAcks() {
         try {
             if(!startReadySemaphore.tryAcquire(N - 1, Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new RuntimeException(new TimeoutException("Ready for new round timeout on node " + i));
+//                throw new RuntimeException(new TimeoutException("Ready for new round timeout on node " + i));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -286,7 +289,7 @@ public class ConsensusAlgorithm {
     public final void waitForLeaderValue() {
         try {
             if(!leaderSemaphore.tryAcquire(1, Constants.VALUE_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new RuntimeException(new TimeoutException("Leader value timeout on node " + i));
+//                throw new RuntimeException(new TimeoutException("Leader value timeout on node " + i));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -296,8 +299,8 @@ public class ConsensusAlgorithm {
     public final void setNodeValue(int nodeId, Value nodeValue) {
         MsgHandler.debug("Algo:Node " + i + " is setting value to " + nodeValue + " on node " + nodeId);
         if (values[nodeId] != null) {
-            throw new IllegalStateException("Attempting to overwrite value " + values[nodeId] + " with value "
-                    + nodeValue + " on node " + nodeId);
+//            throw new IllegalStateException("Attempting to overwrite value " + values[nodeId] + " with value "
+//                    + nodeValue + " on node " + nodeId);
         }
         values[nodeId] = nodeValue;
         valuesSemaphore.release();
@@ -305,8 +308,8 @@ public class ConsensusAlgorithm {
 
     public final void setFinishReady(int nodeId, String nodeValue) {
         if (finishReady[nodeId] != null) {
-            throw new IllegalStateException("Attempting to overwrite value " + finishReady[nodeId] + " with finishReady value "
-                    + nodeValue + " on node " + nodeId);
+//            throw new IllegalStateException("Attempting to overwrite value " + finishReady[nodeId] + " with finishReady value "
+//                    + nodeValue + " on node " + nodeId);
         }
         finishReady[nodeId] = Integer.parseInt(nodeValue);
         finishReadySemaphore.release();
@@ -315,8 +318,8 @@ public class ConsensusAlgorithm {
     public final void setStartReady(int nodeId, String nodeValue) {
         MsgHandler.debug("Algo:Node " + i + " is setting startReady value for round " + nodeValue + " on node " + nodeId);
         if (startReady[nodeId] != null) {
-            throw new IllegalStateException("Attempting to overwrite value " + startReady[nodeId] + " with startReady value "
-                    + nodeValue + " on node " + nodeId);
+//            throw new IllegalStateException("Attempting to overwrite value " + startReady[nodeId] + " with startReady value "
+//                    + nodeValue + " on node " + nodeId);
         }
         startReady[nodeId] = Integer.parseInt(nodeValue);
         startReadySemaphore.release();
@@ -325,8 +328,8 @@ public class ConsensusAlgorithm {
     public final void setLeaderValue(int nodeId, Value nodeValue) {
         MsgHandler.debug("Algo:Node " + i + " is setting leader value to " + nodeValue + " on node " + nodeId);
         if (leaderValue != null) {
-            throw new IllegalStateException("Attempting to overwrite leader value " + values[nodeId] + " with value "
-                    + nodeValue + " on node " + nodeId);
+//            throw new IllegalStateException("Attempting to overwrite leader value " + values[nodeId] + " with value "
+//                    + nodeValue + " on node " + nodeId);
         }
         leaderValue = nodeValue;
         leaderSemaphore.release();

@@ -42,6 +42,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
     // TODO Won't this be different for the two algos?
     // TODO Shouldn't we just be waiting for a minimum number of same responses? Keep a Map of value -> counts
     public Value determineConsensus(){
+        double limitWeight = coordinator.failed ? 2.0/3 * numServers : .75 * numServers;
         double s0 = 0.0; double s1 = 0.0;
         Value currentResponse;
         for (int i = 0; i < responses.length; i++){
@@ -50,9 +51,18 @@ public class CoordinatorMsgHandler extends MsgHandler {
             if (currentResponse == Value.TRUE) s0++;
             if (currentResponse == Value.FALSE) s1++;
         }
-        if (s0 >= 3.0/4) return Value.TRUE;
-        if (s1 >= 3.0/4) return Value.FALSE;
-        else return Value.UNDECIDED;
+        if (s0 >= limitWeight){
+            System.out.println("CONSENSUS REACHED: Nodes decided True with weight: " + s0 + " and limit of: " + limitWeight);
+            return Value.TRUE;
+        }
+        if (s1 >= limitWeight){
+            System.out.println("CONSENSUS REACHED: Nodes decided False with weight: " + s1 + " and limit of: " + limitWeight);
+            return Value.FALSE;
+        }
+        else {
+            System.out.println("CONSENSUS NOT REACHED: Nodes Undecided. s0: " + s0 + ", s1: " + s1 + " and limit of: " + limitWeight);
+            return Value.UNDECIDED;
+        }
     }
 
     @Override
@@ -82,7 +92,7 @@ public class CoordinatorMsgHandler extends MsgHandler {
         if (response != Value.UNDECIDED) {
             responseToClient.add(response.toString());
         } else if (!coordinator.failed){
-            MsgHandler.debug("Switching to Weighted King due to Weighted Queen failure");
+            MsgHandler.debug("COORDINATOR: Switching to Weighted King due to Weighted Queen failure");
 
             coordinator.setAlgorithm(false);
             coordinator.failed = true;
@@ -96,7 +106,9 @@ public class CoordinatorMsgHandler extends MsgHandler {
             if (response != Value.UNDECIDED) {
                 responseToClient.add(response.toString());
             } else {
-                throw new RuntimeException("Consensus Algorithm failed after failing over to Weighted King Algorithm.");
+                responseToClient.add(response.toString());
+                Exception rte = new RuntimeException("Consensus Algorithm failed after failing over to Weighted King Algorithm.");
+                System.out.println(rte.getMessage());
             }
         }
 
