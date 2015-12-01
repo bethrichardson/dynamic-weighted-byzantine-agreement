@@ -158,7 +158,7 @@ public class ConsensusAlgorithm {
         waitForValues();
 
         for (int j = 0; j < weights.size(); j++) {
-            if (suspectWeight[j] >= 0.25) {
+            if (suspectWeight[j] >= rho) {
                 setNodeFaultyState(j, Value.TRUE);
             }
         }
